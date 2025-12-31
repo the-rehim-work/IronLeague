@@ -505,18 +505,6 @@
         }
       }
     },
-    "/api/debug/whoami": {
-      "get": {
-        "tags": [
-          "Debug"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/Fixture/competition/{competitionId}": {
       "get": {
         "tags": [
@@ -599,6 +587,771 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/FixtureDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Game/leagueinstance/{instanceId}/advance": {
+      "post": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "simulateOwn",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulationResult"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulationResult"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulationResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Game/leagueinstance/{instanceId}/advance-until-match": {
+      "post": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "simulateOwn",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulationResult"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulationResult"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulationResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Game/leagueinstance/{instanceId}/teams": {
+      "get": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LeagueTeamDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LeagueTeamDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LeagueTeamDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Game/leagueinstance/{instanceId}/competitions": {
+      "get": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CompetitionSummaryDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CompetitionSummaryDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CompetitionSummaryDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Game/competition/{competitionId}": {
+      "get": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "competitionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompetitionDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompetitionDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompetitionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Game/competition/{competitionId}/standings": {
+      "get": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "competitionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LeagueTeamInstanceDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LeagueTeamInstanceDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LeagueTeamInstanceDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Game/competition/{competitionId}/fixtures": {
+      "get": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "competitionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Game/leagueinstance/{instanceId}/fixtures": {
+      "get": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Game/leagueinstance/{instanceId}/fixtures/grouped": {
+      "get": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Game/leagueinstance/{instanceId}/fixtures/upcoming": {
+      "get": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Game/leagueinstance/{instanceId}/results": {
+      "get": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Game/leagueinstance/{instanceId}/myteam": {
+      "get": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Game/leagueinstance/{instanceId}/myfixtures": {
+      "get": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FixtureDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Game/team/{teamInstanceId}/detail": {
+      "get": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "teamInstanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Game/fixture/{fixtureId}/simulate": {
+      "post": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "fixtureId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Game/player/{playerId}": {
+      "get": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "playerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerDetailDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerDetailDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerDetailDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Game/player/search": {
+      "get": {
+        "tags": [
+          "Game"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "position",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minOverall",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "maxAge",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "maxValue",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerDto"
+                  }
                 }
               }
             }
@@ -1362,6 +2115,138 @@
         },
         "additionalProperties": false
       },
+      "CompetitionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "leagueInstanceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "season": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "teams": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompetitionTeamDto"
+            },
+            "nullable": true
+          },
+          "fixtures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FixtureSummaryDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CompetitionSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CompetitionTeamDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "teamName": {
+            "type": "string",
+            "nullable": true
+          },
+          "groupName": {
+            "type": "string",
+            "nullable": true
+          },
+          "groupPoints": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isEliminated": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ContractDto": {
+        "type": "object",
+        "properties": {
+          "weeklyWage": {
+            "type": "number",
+            "format": "double"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "releaseClause": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "signingBonus": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "goalBonus": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "assistBonus": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "canBeCancelledFree": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "CountryDto": {
         "type": "object",
         "properties": {
@@ -1582,6 +2467,42 @@
         },
         "additionalProperties": false
       },
+      "FixtureSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "homeTeam": {
+            "type": "string",
+            "nullable": true
+          },
+          "awayTeam": {
+            "type": "string",
+            "nullable": true
+          },
+          "scheduledDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "homeScore": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "awayScore": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "GovernanceSettingsDto": {
         "type": "object",
         "properties": {
@@ -1731,13 +2652,17 @@
             "type": "string",
             "format": "uuid"
           },
-          "password": {
+          "managerId": {
             "type": "string",
-            "nullable": true
+            "format": "uuid"
           },
           "teamId": {
             "type": "string",
             "format": "uuid"
+          },
+          "password": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -1828,6 +2753,114 @@
           },
           "governance": {
             "$ref": "#/components/schemas/GovernanceSettingsDto"
+          }
+        },
+        "additionalProperties": false
+      },
+      "LeagueTeamDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "baseTeamId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "shortName": {
+            "type": "string",
+            "nullable": true
+          },
+          "primaryColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "secondaryColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "isControlledByPlayer": {
+            "type": "boolean"
+          },
+          "managerId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "managerName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "LeagueTeamInstanceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "baseTeamId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "teamName": {
+            "type": "string",
+            "nullable": true
+          },
+          "teamColors": {
+            "type": "string",
+            "nullable": true
+          },
+          "managerId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "managerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "isControlledByPlayer": {
+            "type": "boolean"
+          },
+          "points": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "goalsFor": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "goalsAgainst": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "goalDifference": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "wins": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "draws": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "losses": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "played": {
+            "type": "integer",
+            "format": "int32"
           }
         },
         "additionalProperties": false
@@ -2058,6 +3091,35 @@
         },
         "additionalProperties": false
       },
+      "MatchSimResult": {
+        "type": "object",
+        "properties": {
+          "fixtureId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "homeTeamName": {
+            "type": "string",
+            "nullable": true
+          },
+          "awayTeamName": {
+            "type": "string",
+            "nullable": true
+          },
+          "homeScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "awayScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "involvesPlayer": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "MatchSummaryDto": {
         "type": "object",
         "properties": {
@@ -2146,6 +3208,142 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PlayerAttributeDto": {
+        "type": "object",
+        "properties": {
+          "attributeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "value": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PlayerDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "fullName": {
+            "type": "string",
+            "nullable": true
+          },
+          "nationality": {
+            "type": "string",
+            "nullable": true
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "age": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "primaryPosition": {
+            "type": "string",
+            "nullable": true
+          },
+          "secondaryPosition": {
+            "type": "string",
+            "nullable": true
+          },
+          "pace": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "shooting": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "passing": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "dribbling": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "defending": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "physical": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "overall": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "potential": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "morale": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "fitness": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "form": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "marketValue": {
+            "type": "number",
+            "format": "double"
+          },
+          "isLegend": {
+            "type": "boolean"
+          },
+          "isSpecialLegend": {
+            "type": "boolean"
+          },
+          "teamId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "teamName": {
+            "type": "string",
+            "nullable": true
+          },
+          "contract": {
+            "$ref": "#/components/schemas/ContractDto"
+          },
+          "languages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlayerLanguageDto"
+            },
+            "nullable": true
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlayerAttributeDto"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -2258,6 +3456,19 @@
         },
         "additionalProperties": false
       },
+      "PlayerLanguageDto": {
+        "type": "object",
+        "properties": {
+          "languageCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "isNative": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "PlayerSummaryDto": {
         "type": "object",
         "properties": {
@@ -2312,6 +3523,33 @@
             "nullable": true
           },
           "displayName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SimulationResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "newDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "simulatedMatches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatchSimResult"
+            },
+            "nullable": true
+          },
+          "playerMatchUpcoming": {
+            "$ref": "#/components/schemas/FixtureDto"
+          },
+          "message": {
             "type": "string",
             "nullable": true
           }

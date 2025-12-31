@@ -1,2 +1,0 @@
-// Update handlePlayMatch in LeagueDetailPage:
-
