@@ -21,12 +21,10 @@ export default function MatchPitch({
   homeColor,
   awayColor,
 }: MatchPitchProps) {
-  // Adjust ball Y coordinate to fit SVG viewBox (0-75 range)
   const adjustedBallY = ballY * 0.75;
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      {/* Score Display */}
       <div className="bg-gray-800 rounded-t-lg p-4 flex items-center justify-between border-b-2 border-green-600">
         <div className="flex items-center gap-4">
           <div className="w-8 h-8 rounded-full" style={{ backgroundColor: homeColor }}></div>
@@ -44,13 +42,11 @@ export default function MatchPitch({
         </div>
       </div>
 
-      {/* Pitch */}
       <svg
         viewBox="0 0 100 75"
         className="w-full bg-green-700 rounded-b-lg border-4 border-gray-800"
         style={{ aspectRatio: '4/3' }}
       >
-        {/* Grass pattern */}
         <defs>
           <pattern id="grass" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
             <rect width="10" height="10" fill="#16a34a" />
@@ -59,33 +55,23 @@ export default function MatchPitch({
         </defs>
         <rect width="100" height="75" fill="url(#grass)" />
 
-        {/* Pitch markings */}
         <rect x="1" y="1" width="98" height="73" fill="none" stroke="white" strokeWidth="0.3" />
-
-        {/* Center line */}
         <line x1="50" y1="1" x2="50" y2="74" stroke="white" strokeWidth="0.3" />
-
-        {/* Center circle */}
         <circle cx="50" cy="37.5" r="9" fill="none" stroke="white" strokeWidth="0.3" />
         <circle cx="50" cy="37.5" r="0.5" fill="white" />
 
-        {/* Penalty areas */}
         <rect x="1" y="22.5" width="16" height="30" fill="none" stroke="white" strokeWidth="0.3" />
         <rect x="83" y="22.5" width="16" height="30" fill="none" stroke="white" strokeWidth="0.3" />
 
-        {/* Goal areas */}
         <rect x="1" y="30" width="6" height="15" fill="none" stroke="white" strokeWidth="0.3" />
         <rect x="93" y="30" width="6" height="15" fill="none" stroke="white" strokeWidth="0.3" />
 
-        {/* Penalty spots */}
         <circle cx="11" cy="37.5" r="0.5" fill="white" />
         <circle cx="89" cy="37.5" r="0.5" fill="white" />
 
-        {/* Goals */}
         <rect x="0" y="33" width="1" height="9" fill="white" opacity="0.5" />
         <rect x="99" y="33" width="1" height="9" fill="white" opacity="0.5" />
 
-        {/* Ball */}
         <circle
           cx={ballX}
           cy={adjustedBallY}
@@ -103,7 +89,6 @@ export default function MatchPitch({
           />
         </circle>
 
-        {/* Ball shadow */}
         <ellipse
           cx={ballX}
           cy={adjustedBallY + 0.3}

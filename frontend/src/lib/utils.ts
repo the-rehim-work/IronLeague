@@ -5,12 +5,13 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(amount: number, currency: string = 'EUR'): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  if (amount >= 1000000) {
+    return `€${(amount / 1000000).toFixed(1)}M`;
+  }
+  if (amount >= 1000) {
+    return `€${(amount / 1000).toFixed(0)}K`;
+  }
+  return `€${amount.toFixed(0)}`;
 }
 
 export function formatDate(date: string | Date): string {
@@ -47,18 +48,35 @@ export function getPositionColor(position: string): string {
   return 'bg-gray-500';
 }
 
-export function getFormColor(form: number): string {
-  if (form >= 75) return 'text-green-600';
-  if (form >= 50) return 'text-yellow-600';
-  return 'text-red-600';
+export function getOverallColor(overall: number): string {
+  if (overall >= 85) return 'text-yellow-400';
+  if (overall >= 75) return 'text-green-400';
+  if (overall >= 65) return 'text-blue-400';
+  return 'text-gray-400';
 }
 
-export function getMoraleColor(morale: number): string {
-  if (morale >= 75) return 'text-green-600';
-  if (morale >= 50) return 'text-yellow-600';
-  return 'text-red-600';
+export function getMoraleColor(value: number): string {
+  if (value >= 80) return 'text-green-400';
+  if (value >= 60) return 'text-green-300';
+  if (value >= 40) return 'text-yellow-400';
+  if (value >= 20) return 'text-orange-400';
+  return 'text-red-400';
 }
 
-export function getTeamGradient(primaryColor: string, secondaryColor: string): string {
-  return `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`;
+export function getStatusBadgeClass(status: string): string {
+  switch (status) {
+    case 'Active':
+    case 'InProgress':
+      return 'bg-green-500/20 text-green-400';
+    case 'Lobby':
+    case 'Scheduled':
+      return 'bg-blue-500/20 text-blue-400';
+    case 'Completed':
+    case 'Finished':
+      return 'bg-gray-500/20 text-gray-400';
+    case 'Paused':
+      return 'bg-yellow-500/20 text-yellow-400';
+    default:
+      return 'bg-gray-500/20 text-gray-400';
+  }
 }

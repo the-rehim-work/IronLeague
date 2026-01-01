@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
+import { Gamepad2 } from 'lucide-react';
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -49,11 +51,14 @@ export default function Login() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-white mb-2">IRON LEAGUE</h1>
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Gamepad2 className="w-12 h-12 text-blue-500" />
+            <h1 className="text-5xl font-bold text-white">IRON LEAGUE</h1>
+          </div>
           <p className="text-gray-400">Manage. Compete. Dominate.</p>
         </div>
 
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-2xl p-8 border border-gray-700">
+        <div className="card p-8">
           <div className="flex mb-6 bg-gray-900/50 rounded-lg p-1">
             <button
               onClick={() => setIsLogin(true)}
@@ -82,28 +87,24 @@ export default function Login() {
           {isLogin ? (
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Username or Email
-                </label>
+                <label className="label">Username or Email</label>
                 <input
                   type="text"
                   value={userOrEmail}
                   onChange={(e) => setUserOrEmail(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  className="input"
                   placeholder="Enter username or email"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Password
-                </label>
+                <label className="label">Password</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  className="input"
                   placeholder="Enter password"
                   required
                 />
@@ -112,7 +113,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Logging in...' : 'Login'}
               </button>
@@ -120,55 +121,47 @@ export default function Login() {
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Username
-                </label>
+                <label className="label">Username</label>
                 <input
                   type="text"
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  className="input"
                   placeholder="Choose a username"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Email (optional)
-                </label>
+                <label className="label">Email (optional)</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  className="input"
                   placeholder="Your email"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Display Name (optional)
-                </label>
+                <label className="label">Display Name (optional)</label>
                 <input
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  className="input"
                   placeholder="How others see you"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Password
-                </label>
+                <label className="label">Password</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-                  placeholder="Create a password"
+                  className="input"
+                  placeholder="Create a password (min 6 chars)"
                   required
                 />
               </div>
@@ -176,7 +169,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Creating account...' : 'Register'}
               </button>
@@ -184,7 +177,7 @@ export default function Login() {
           )}
 
           <div className="mt-6 text-center text-sm text-gray-400">
-            <p>Demo: Admin / Admin123!</p>
+            <p>Demo credentials: <span className="text-white">Admin</span> / <span className="text-white">Admin123!</span></p>
           </div>
         </div>
       </div>

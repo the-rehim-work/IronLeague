@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { HubConnectionBuilder, HubConnection, LogLevel } from '@microsoft/signalr';
 
 export class MatchHubClient {
@@ -15,8 +16,6 @@ export class MatchHubClient {
       .build();
 
     await this.connection.start();
-
-    // Join the match room after connecting
     await this.connection.invoke('JoinMatch', matchId);
 
     return this.connection;
@@ -59,47 +58,22 @@ export class MatchHubClient {
 
   async pauseMatch(duration: number): Promise<void> {
     if (!this.connection) throw new Error('Not connected');
-    await this.connection.invoke('Pause', duration);
+    await this.connection.invoke('PauseMatch', duration);
   }
 
   async resumeMatch(): Promise<void> {
     if (!this.connection) throw new Error('Not connected');
-    await this.connection.invoke('Resume');
+    await this.connection.invoke('ResumeMatch');
   }
 
-  async giveSpeech(message: string): Promise<void> {
+  async giveSpeech(dto: any): Promise<void> {
     if (!this.connection) throw new Error('Not connected');
-    await this.connection.invoke('GiveSpeech', message);
-  }
-}
-
-export class NotificationHubClient {
-  private connection: HubConnection | null = null;
-
-  async connect(): Promise<HubConnection> {
-    const token = localStorage.getItem('token');
-
-    this.connection = new HubConnectionBuilder()
-      .withUrl('/hubs/notifications', {
-        accessTokenFactory: () => token || '',
-      })
-      .withAutomaticReconnect()
-      .configureLogging(LogLevel.Information)
-      .build();
-
-    await this.connection.start();
-    return this.connection;
+    await this.connection.invoke('GiveSpeech', dto);
   }
 
-  async disconnect() {
-    if (this.connection) {
-      await this.connection.stop();
-      this.connection = null;
-    }
-  }
-
-  onNotification(callback: (notification: any) => void) {
-    this.connection?.on('ReceiveNotification', callback);
+  async startMatch(dto: any): Promise<void> {
+    if (!this.connection) throw new Error('Not connected');
+    await this.connection.invoke('StartMatch', dto);
   }
 }
 
@@ -110,7 +84,7 @@ export class LeagueHubClient {
     const token = localStorage.getItem('token');
 
     this.connection = new HubConnectionBuilder()
-      .withUrl(`/hubs/league?leagueId=${leagueId}`, {
+      .withUrl('/hubs/league', {
         accessTokenFactory: () => token || '',
       })
       .withAutomaticReconnect()
@@ -118,6 +92,8 @@ export class LeagueHubClient {
       .build();
 
     await this.connection.start();
+    await this.connection.invoke('JoinLeague', leagueId);
+
     return this.connection;
   }
 
@@ -134,13 +110,5 @@ export class LeagueHubClient {
 
   onFixtureUpdate(callback: (data: any) => void) {
     this.connection?.on('FixtureUpdate', callback);
-  }
-
-  onPlayerJoined(callback: (data: any) => void) {
-    this.connection?.on('PlayerJoined', callback);
-  }
-
-  onPlayerLeft(callback: (data: any) => void) {
-    this.connection?.on('PlayerLeft', callback);
   }
 }

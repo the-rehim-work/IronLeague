@@ -1,4 +1,3 @@
-// Core User & Auth Types
 export interface User {
   id: string;
   userName: string;
@@ -303,30 +302,6 @@ export interface Notification {
 
 export type NotificationType = 'System' | 'MatchResult' | 'Transfer' | 'LeagueInvite' | 'FriendRequest' | 'Achievement' | 'ManagerOffer' | 'SeasonEnd' | 'Injury' | 'Scandal';
 
-export interface LeagueInvite {
-  id: string;
-  leagueInstanceId: string;
-  leagueName: string;
-  invitedByUserId: string;
-  invitedByName: string;
-  invitedAt: string;
-  status: InviteStatus;
-}
-
-export type InviteStatus = 'Pending' | 'Accepted' | 'Declined' | 'Expired';
-
-export interface Friendship {
-  id: string;
-  friendId: string;
-  friendName: string;
-  friendAvatarId: string;
-  status: FriendshipStatus;
-  createdAt: string;
-}
-
-export type FriendshipStatus = 'Pending' | 'Accepted' | 'Blocked';
-
-// Speech & Tactical
 export interface Speech {
   type: SpeechType;
   target: SpeechTarget;
@@ -344,17 +319,8 @@ export interface TacticalChange {
   playerInstructions?: Record<string, string>;
 }
 
-// API Response Types
 export interface ApiError {
   code: string;
   message: string;
   errors?: Record<string, string[]>;
-}
-
-export interface PagedResult<T> {
-  items: T[];
-  totalCount: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
 }

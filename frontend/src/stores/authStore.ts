@@ -13,10 +13,10 @@ interface AuthState {
   register: (userName: string, password: string, email?: string, displayName?: string) => Promise<void>;
   logout: () => void;
   setCurrentManager: (manager: Manager | null) => void;
-  loadManagers: () => Promise<void>;
+  setManagers: (managers: Manager[]) => void;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   managers: [],
   currentManager: null,
@@ -42,8 +42,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ currentManager: manager });
   },
 
-  loadManagers: async () => {
-    // Will be implemented when managers API is ready
-    set({ managers: [] });
+  setManagers: (managers) => {
+    set({ managers });
   },
 }));

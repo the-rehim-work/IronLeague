@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Manager } from '../types';
+import type { Manager, Country } from '../types';
 
 export interface CreateManagerDto {
   name: string;
@@ -20,6 +20,11 @@ export const managersApi = {
 
   async getById(id: string): Promise<Manager> {
     const { data } = await apiClient.get<Manager>(`/manager/${id}`);
+    return data;
+  },
+
+  async getCountries(): Promise<Country[]> {
+    const { data } = await apiClient.get<Country[]>('/data/countries');
     return data;
   },
 };

@@ -1,14 +1,20 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { apiClient } from './client';
-import type { Team } from '../types';
+import type { Team, Player } from '../types';
 
 export const teamsApi = {
-  async getAvailableTeams(leagueId: string): Promise<Team[]> {
+  async getByLeague(leagueId: string): Promise<Team[]> {
     const { data } = await apiClient.get<Team[]>(`/data/teams/${leagueId}`);
     return data;
   },
 
-  async getTeamDetails(teamId: string): Promise<Team> {
-    const { data } = await apiClient.get<Team>(`/game/team/${teamId}/detail`);
+  async getDetail(teamInstanceId: string): Promise<any> {
+    const { data } = await apiClient.get(`/game/team/${teamInstanceId}/detail`);
+    return data;
+  },
+
+  async getPlayers(teamId: string): Promise<Player[]> {
+    const { data } = await apiClient.get<Player[]>(`/data/players/${teamId}`);
     return data;
   },
 };

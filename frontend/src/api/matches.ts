@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { apiClient } from './client';
 import type { Match, Fixture, Speech, TacticalChange } from '../types';
 
 export const matchesApi = {
-  async getFixtures(leagueId: string): Promise<Fixture[]> {
-    const { data } = await apiClient.get<Fixture[]>(`/leagues/${leagueId}/fixtures`);
+  async getById(matchId: string): Promise<Match> {
+    const { data } = await apiClient.get<Match>(`/match/${matchId}`);
     return data;
   },
 
@@ -12,27 +13,24 @@ export const matchesApi = {
     return data;
   },
 
-  async startMatch(fixtureId: string, homeFormation: string, awayFormation: string): Promise<Match> {
-    const { data } = await apiClient.post<Match>(`/fixtures/${fixtureId}/start`, {
+  async startMatch(fixtureId: string, homeFormation: string, homeTactics: string, awayFormation: string, awayTactics: string): Promise<Match> {
+    const { data } = await apiClient.post<Match>('/match/start', {
+      fixtureId,
       homeFormation,
+      homeTactics,
       awayFormation,
+      awayTactics,
     });
     return data;
   },
 
-  async pauseMatch(matchId: string) {
-    await apiClient.post(`/matches/${matchId}/pause`);
+  async simulateFixture(fixtureId: string): Promise<any> {
+    const { data } = await apiClient.post(`/game/fixture/${fixtureId}/simulate`);
+    return data;
   },
 
-  async resumeMatch(matchId: string) {
-    await apiClient.post(`/matches/${matchId}/resume`);
-  },
-
-  async giveSpeech(matchId: string, speech: Speech) {
-    await apiClient.post(`/matches/${matchId}/speech`, speech);
-  },
-
-  async changeTactics(matchId: string, change: TacticalChange) {
-    await apiClient.post(`/matches/${matchId}/tactics`, change);
+  async getFixture(fixtureId: string): Promise<Fixture> {
+    const { data } = await apiClient.get<Fixture>(`/fixture/${fixtureId}`);
+    return data;
   },
 };

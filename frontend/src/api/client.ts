@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios, { AxiosError } from 'axios';
 import type { ApiError } from '../types';
 
@@ -11,7 +12,6 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
-// Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -23,7 +23,6 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiError>) => {
