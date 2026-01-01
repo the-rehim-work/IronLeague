@@ -6,6 +6,7 @@ import { MatchHubClient } from '../lib/signalr';
 import MatchPitch from '../components/MatchPitch';
 import LoadingSpinner from '../components/Loadingspinner';
 import { ArrowLeft, Pause, Play, MessageSquare } from 'lucide-react';
+import SpeechModal from '../components/SpeechModal';
 
 interface MatchState {
   tick: number;
@@ -41,6 +42,8 @@ export default function Match() {
   const [isPaused, setIsPaused] = useState(false);
   const hubRef = useRef<MatchHubClient | null>(null);
   const eventsEndRef = useRef<HTMLDivElement>(null);
+  const [showSpeechModal, setShowSpeechModal] = useState(false);
+  const [speechesRemaining, setSpeechesRemaining] = useState(3);
 
   useEffect(() => {
     if (!matchId) {
@@ -119,18 +122,32 @@ export default function Match() {
   }
 
   async function handlePause() {
-    if (!hubRef.current) return;
+    if (!hubRef.current || !matchId) return;
     try {
-      await hubRef.current.pauseMatch(30);
+      await hubRef.current.pauseMatch(matchId);
     } catch (err: any) {
       setError(err.message);
     }
   }
 
   async function handleResume() {
-    if (!hubRef.current) return;
+    if (!hubRef.current || !matchId) return;
     try {
-      await hubRef.current.resumeMatch();
+      await hubRef.current.resumeMatch(matchId);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  async function handleSpeech(speech: { type: string; target: string; targetPlayerId?: string; tone: string }) {
+    if (!hubRef.current || !matchId) return;
+    try {
+      await hubRef.current.giveSpeech({
+        matchId,
+        ...speech,
+      });
+      setSpeechesRemaining((prev) => prev - 1);
+      setShowSpeechModal(false);
     } catch (err: any) {
       setError(err.message);
     }
@@ -209,8 +226,8 @@ export default function Match() {
                     Resume
                   </button>
                 ) : (
-                  <button 
-                    onClick={handlePause} 
+                  <button
+                    onClick={handlePause}
                     disabled={matchState.status === 'Finished'}
                     className="w-full btn-secondary flex items-center justify-center gap-2 disabled:opacity-50"
                   >
@@ -218,6 +235,14 @@ export default function Match() {
                     Pause
                   </button>
                 )}
+                <button
+                  onClick={() => setShowSpeechModal(true)}
+                  disabled={matchState.status === 'Finished' || speechesRemaining <= 0}
+                  className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  Speech ({speechesRemaining})
+                </button>
               </div>
             </div>
 
@@ -288,23 +313,21 @@ export default function Match() {
                   events.map((event) => (
                     <div
                       key={event.id}
-                      className={`p-3 rounded-lg ${
-                        event.type === 'Goal'
-                          ? 'bg-green-900/30 border border-green-500'
-                          : event.type === 'YellowCard'
+                      className={`p-3 rounded-lg ${event.type === 'Goal'
+                        ? 'bg-green-900/30 border border-green-500'
+                        : event.type === 'YellowCard'
                           ? 'bg-yellow-900/30 border border-yellow-500'
                           : event.type === 'RedCard'
-                          ? 'bg-red-900/30 border border-red-500'
-                          : event.isKeyEvent
-                          ? 'bg-blue-900/20 border border-blue-500/30'
-                          : 'bg-gray-800/50'
-                      }`}
+                            ? 'bg-red-900/30 border border-red-500'
+                            : event.isKeyEvent
+                              ? 'bg-blue-900/20 border border-blue-500/30'
+                              : 'bg-gray-800/50'
+                        }`}
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-gray-400 font-mono w-8">{event.minute}'</span>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                          event.isHomeTeam ? 'bg-blue-500/30 text-blue-400' : 'bg-red-500/30 text-red-400'
-                        }`}>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${event.isHomeTeam ? 'bg-blue-500/30 text-blue-400' : 'bg-red-500/30 text-red-400'
+                          }`}>
                           {event.type}
                         </span>
                         <span className="text-sm text-gray-300 flex-1">{event.description}</span>
@@ -318,6 +341,14 @@ export default function Match() {
           </div>
         </div>
       </div>
+      {showSpeechModal && (
+        <SpeechModal
+          players={[]}
+          onSubmit={handleSpeech}
+          onClose={() => setShowSpeechModal(false)}
+          speechesRemaining={speechesRemaining}
+        />
+      )}
     </div>
   );
 }

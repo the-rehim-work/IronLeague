@@ -404,21 +404,43 @@ public class GameController : ControllerBase
         return Ok(await _fixtureService.GetFixturesAsync(competitionId));
     }
 
-    [HttpGet("leagueinstance/{instanceId}/fixtures")]
-    public async Task<ActionResult<List<FixtureDto>>> GetLeagueFixtures(Guid instanceId)
+    [HttpGet("leagueinstance/{id}/fixtures")]
+    public async Task<IActionResult> GetLeagueFixtures(Guid id)
     {
         var competitions = await _db.Competitions
-            .Where(c => c.LeagueInstanceId == instanceId)
+            .Where(c => c.LeagueInstanceId == id)
             .Select(c => c.Id)
             .ToListAsync();
 
-        var allFixtures = new List<FixtureDto>();
-        foreach (var compId in competitions)
-        {
-            allFixtures.AddRange(await _fixtureService.GetFixturesAsync(compId));
-        }
+        var fixtures = await _db.Fixtures
+            .Include(f => f.HomeTeam).ThenInclude(t => t.BaseTeam)
+            .Include(f => f.AwayTeam).ThenInclude(t => t.BaseTeam)
+            .Include(f => f.Match)
+            .Where(f => competitions.Contains(f.CompetitionId))
+            .OrderBy(f => f.MatchDay).ThenBy(f => f.ScheduledDate)
+            .Select(f => new
+            {
+                f.Id,
+                f.CompetitionId,
+                HomeTeamId = f.HomeTeamId,
+                HomeTeamName = f.HomeTeam.BaseTeam.Name,
+                HomeTeamColors = f.HomeTeam.BaseTeam.PrimaryColor,
+                AwayTeamId = f.AwayTeamId,
+                AwayTeamName = f.AwayTeam.BaseTeam.Name,
+                AwayTeamColors = f.AwayTeam.BaseTeam.PrimaryColor,
+                f.ScheduledDate,
+                f.MatchDay,
+                Status = f.Status.ToString(),
+                Match = f.Match == null ? null : new
+                {
+                    f.Match.Id,
+                    f.Match.HomeScore,
+                    f.Match.AwayScore
+                }
+            })
+            .ToListAsync();
 
-        return Ok(allFixtures.OrderBy(f => f.ScheduledDate).ToList());
+        return Ok(fixtures);
     }
 
     [HttpGet("leagueinstance/{instanceId}/fixtures/grouped")]

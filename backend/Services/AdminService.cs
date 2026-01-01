@@ -21,11 +21,11 @@ public class AdminService : IAdminService
     private readonly UserManager<AppUser> _userManager;
     private readonly RoleManager<AppRole> _roleManager;
 
-    public AdminService(AppDbContext db, UserManager<AppUser> userManager, RoleManager<AppRole> roleManager) 
-    { 
-        _db = db; 
-        _userManager = userManager; 
-        _roleManager = roleManager; 
+    public AdminService(AppDbContext db, UserManager<AppUser> userManager, RoleManager<AppRole> roleManager)
+    {
+        _db = db;
+        _userManager = userManager;
+        _roleManager = roleManager;
     }
 
     public async Task<bool> CreateCountryAsync(AdminCreateCountryDto dto)
@@ -110,7 +110,7 @@ public class AdminService : IAdminService
             _db.Leagues.AddRange(leagues);
 
             var rng = new Random(42);
-            
+
             var firstNames = new[] { "James", "John", "Michael", "David", "Robert", "William", "Richard", "Joseph", "Thomas", "Charles", "Daniel", "Matthew", "Anthony", "Mark", "Donald", "Steven", "Paul", "Andrew", "Joshua", "Kenneth", "Kevin", "Brian", "George", "Timothy", "Ronald", "Edward", "Jason", "Jeffrey", "Ryan", "Jacob", "Gary", "Nicholas", "Eric", "Jonathan", "Stephen", "Larry", "Justin", "Scott", "Brandon", "Benjamin", "Samuel", "Raymond", "Gregory", "Frank", "Alexander", "Patrick", "Jack", "Dennis", "Jerry", "Tyler" };
             var lastNames = new[] { "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Perez", "Thompson", "White", "Harris", "Sanchez", "Clark", "Ramirez", "Lewis", "Robinson", "Walker", "Young", "Allen", "King", "Wright", "Scott", "Torres", "Nguyen", "Hill", "Flores", "Green", "Adams", "Nelson", "Baker", "Hall", "Rivera", "Campbell", "Mitchell", "Carter", "Roberts" };
 
@@ -167,17 +167,17 @@ public class AdminService : IAdminService
                     {
                         var pos = positions[p];
                         var isStarter = p < 11;
-                        
-                        var playerStrength = isStarter 
+
+                        var playerStrength = isStarter
                             ? teamBaseStrength + rng.Next(-5, 6)
                             : teamBaseStrength - 10 + rng.Next(-5, 6);
-                        
+
                         playerStrength = Math.Clamp(playerStrength, 45, 94);
 
                         var age = GeneratePlayerAge(pos, playerStrength, rng);
                         var potential = GeneratePotential(age, playerStrength, rng);
 
-                        var (pace, shooting, passing, dribbling, defending, physical) = 
+                        var (pace, shooting, passing, dribbling, defending, physical) =
                             GenerateAttributes(pos, playerStrength, rng);
 
                         var player = new Player
@@ -204,14 +204,14 @@ public class AdminService : IAdminService
                             Form = 50 + rng.Next(-20, 21)
                         };
 
-                        player.Languages.Add(new PlayerLanguage 
-                        { 
-                            Id = Guid.NewGuid(), 
-                            PlayerId = player.Id, 
-                            LanguageCode = country.PrimaryLanguage, 
-                            IsNative = true 
+                        player.Languages.Add(new PlayerLanguage
+                        {
+                            Id = Guid.NewGuid(),
+                            PlayerId = player.Id,
+                            LanguageCode = country.PrimaryLanguage,
+                            IsNative = true
                         });
-                        
+
                         if (rng.NextDouble() < 0.3)
                         {
                             var extraLangs = new[] { "en", "es", "pt", "fr", "de", "it" };
@@ -280,9 +280,80 @@ public class AdminService : IAdminService
             if (!addRes.Succeeded) throw new InvalidOperationException(string.Join("; ", addRes.Errors.Select(e => e.Description)));
         }
 
+        await SeedLegendsAsync();
+
         await _db.SaveChangesAsync();
     }
 
+    public async Task SeedLegendsAsync()
+    {
+        if (await _db.Players.AnyAsync(p => p.IsLegend)) return;
+
+        var rng = new Random(1337);
+        var countries = await _db.Countries.ToListAsync();
+        if (countries.Count == 0) return;
+
+        var legendFirstNames = new[] { "Pele", "Diego", "Johan", "Franz", "Michel", "Marco", "Zinedine", "Ronaldo", "Ronaldinho", "Thierry", "Paolo", "Franco", "Bobby", "George", "Alfredo", "Ferenc", "Gerd", "Eusebio", "Lev", "Gordon", "Roberto", "Lothar", "Ruud", "Dennis", "Eric", "Ryan", "Paul", "Patrick", "Andrea", "Xavi", "Andres", "Carles", "Raul", "Fernando", "David", "Steven", "Frank", "John", "Alessandro", "Gianluigi" };
+        var legendLastNames = new[] { "Santos", "Maradona", "Cruyff", "Beckenbauer", "Platini", "Van Basten", "Zidane", "Nazario", "Gaucho", "Henry", "Maldini", "Baresi", "Moore", "Best", "Di Stefano", "Puskas", "Muller", "Silva", "Yashin", "Banks", "Baggio", "Matthaus", "Gullit", "Bergkamp", "Cantona", "Giggs", "Scholes", "Vieira", "Pirlo", "Hernandez", "Iniesta", "Puyol", "Gonzalez", "Torres", "Beckham", "Gerrard", "Lampard", "Terry", "Del Piero", "Buffon" };
+
+        var positions = Enum.GetValues<Position>();
+
+        for (int i = 0; i < 200; i++)
+        {
+            var isSpecial = i < 50;
+            var minAttr = isSpecial ? 90 : 85;
+            var maxAttr = 99;
+
+            var country = countries[rng.Next(countries.Count)];
+            var pos = positions[rng.Next(positions.Length)];
+            var age = rng.Next(28, 40);
+
+            var pace = rng.Next(minAttr, maxAttr + 1);
+            var shooting = rng.Next(minAttr, maxAttr + 1);
+            var passing = rng.Next(minAttr, maxAttr + 1);
+            var dribbling = rng.Next(minAttr, maxAttr + 1);
+            var defending = rng.Next(minAttr, maxAttr + 1);
+            var physical = rng.Next(minAttr, maxAttr + 1);
+
+            var player = new Player
+            {
+                Id = Guid.NewGuid(),
+                FirstName = legendFirstNames[rng.Next(legendFirstNames.Length)],
+                LastName = legendLastNames[rng.Next(legendLastNames.Length)],
+                Nationality = country.Code,
+                DateOfBirth = DateTime.UtcNow.AddYears(-age).AddDays(-rng.Next(365)),
+                PrimaryPosition = pos,
+                SecondaryPosition = rng.NextDouble() < 0.4 ? positions[rng.Next(positions.Length)] : null,
+                Pace = pace,
+                Shooting = shooting,
+                Passing = passing,
+                Dribbling = dribbling,
+                Defending = defending,
+                Physical = physical,
+                Potential = 99,
+                CurrentAbility = (pace + shooting + passing + dribbling + defending + physical) / 6,
+                MarketValue = isSpecial ? rng.Next(50_000_000, 150_000_000) : rng.Next(20_000_000, 80_000_000),
+                IsLegend = true,
+                IsSpecialLegend = isSpecial,
+                TeamId = null,
+                Morale = 80,
+                Fitness = 100,
+                Form = 70
+            };
+
+            player.Languages.Add(new PlayerLanguage
+            {
+                Id = Guid.NewGuid(),
+                PlayerId = player.Id,
+                LanguageCode = country.PrimaryLanguage,
+                IsNative = true
+            });
+
+            _db.Players.Add(player);
+        }
+
+        await _db.SaveChangesAsync();
+    }
     private static Position[] GetSquadPositions()
     {
         return new[]
@@ -291,13 +362,13 @@ public class AdminService : IAdminService
             Position.CB, Position.CB, Position.LB, Position.RB,
             Position.CDM, Position.CM, Position.CM, Position.CAM,
             Position.LW, Position.ST,
-            
+
             Position.GK,
             Position.CB, Position.CB, Position.RB,
             Position.CDM, Position.CM, Position.CAM,
             Position.RW, Position.LW,
             Position.ST,
-            
+
             Position.CB, Position.CM, Position.LW, Position.ST
         };
     }
@@ -324,7 +395,7 @@ public class AdminService : IAdminService
     private static int GeneratePlayerAge(Position pos, int strength, Random rng)
     {
         var baseAge = pos == Position.GK ? 27 : 25;
-        
+
         if (strength >= 85) baseAge += rng.Next(-2, 4);
         else if (strength >= 75) baseAge += rng.Next(-4, 4);
         else baseAge += rng.Next(-6, 3);
@@ -345,7 +416,7 @@ public class AdminService : IAdminService
         return Math.Clamp(current + potentialBonus, current, 99);
     }
 
-    private static (int pace, int shooting, int passing, int dribbling, int defending, int physical) 
+    private static (int pace, int shooting, int passing, int dribbling, int defending, int physical)
         GenerateAttributes(Position pos, int baseStrength, Random rng)
     {
         var variance = () => rng.Next(-8, 9);

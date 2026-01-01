@@ -36,7 +36,7 @@ export class MatchHubClient {
     this.connection?.on('MatchEvent', callback);
   }
 
-  onMatchPaused(callback: (data: any) => void) {
+  onMatchPaused(callback: () => void) {
     this.connection?.on('MatchPaused', callback);
   }
 
@@ -48,22 +48,22 @@ export class MatchHubClient {
     this.connection?.on('MatchEnded', callback);
   }
 
+  onError(callback: (error: string) => void) {
+    this.connection?.on('Error', callback);
+  }
+
   onMatchFinished(callback: (summary: any) => void) {
     this.connection?.on('MatchFinished', callback);
   }
 
-  onError(callback: (errorMsg: string) => void) {
-    this.connection?.on('Error', callback);
+  async pauseMatch(matchId: string): Promise<void> {
+    if (!this.connection) throw new Error('Not connected');
+    await this.connection.invoke('PauseMatch', matchId);
   }
 
-  async pauseMatch(duration: number): Promise<void> {
+  async resumeMatch(matchId: string): Promise<void> {
     if (!this.connection) throw new Error('Not connected');
-    await this.connection.invoke('PauseMatch', duration);
-  }
-
-  async resumeMatch(): Promise<void> {
-    if (!this.connection) throw new Error('Not connected');
-    await this.connection.invoke('ResumeMatch');
+    await this.connection.invoke('ResumeMatch', matchId);
   }
 
   async giveSpeech(dto: any): Promise<void> {

@@ -7,6 +7,7 @@ import { leaguesApi, teamsApi, managersApi } from '../api';
 import type { LeagueInstance, LeagueTeamInstance, Manager, Competition, Team } from '../types';
 import { ArrowLeft, Play, FastForward, Users, Trophy, Calendar, Settings } from 'lucide-react';
 import { getStatusBadgeClass, formatDate, formatCurrency } from '../lib/utils';
+import Toast, { ToastType } from '../components/Toast';
 
 export default function LeagueDetail() {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +24,7 @@ export default function LeagueDetail() {
   const [activeTab, setActiveTab] = useState<'overview' | 'standings' | 'fixtures' | 'teams'>('overview');
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [error, setError] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
   useEffect(() => {
     if (id) loadLeague(id);
@@ -75,7 +77,7 @@ export default function LeagueDetail() {
       await loadLeague(id);
     } catch (error) {
       console.error('Failed to start league:', error);
-      alert('Failed to start league');
+      setToast({ message: 'Failed to start league', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -88,7 +90,7 @@ export default function LeagueDetail() {
       const result = await leaguesApi.advanceDay(id);
       await loadLeague(id);
       if (result.playerMatchUpcoming) {
-        alert(`Your match is scheduled! ${result.playerMatchUpcoming.homeTeamName} vs ${result.playerMatchUpcoming.awayTeamName}`);
+        setToast({ message: `Your match is scheduled! ${result.playerMatchUpcoming.homeTeamName} vs ${result.playerMatchUpcoming.awayTeamName}`, type: 'info' });
       }
     } catch (error) {
       console.error('Failed to advance day:', error);
@@ -104,7 +106,7 @@ export default function LeagueDetail() {
       const result = await leaguesApi.advanceUntilMatch(id);
       await loadLeague(id);
       if (result.playerMatchUpcoming) {
-        alert(`Your next match: ${result.playerMatchUpcoming.homeTeamName} vs ${result.playerMatchUpcoming.awayTeamName}`);
+        setToast({ message: `Your next match: ${result.playerMatchUpcoming.homeTeamName} vs ${result.playerMatchUpcoming.awayTeamName}`, type: 'info' });
       }
     } catch (error) {
       console.error('Failed to advance:', error);
@@ -121,7 +123,7 @@ export default function LeagueDetail() {
       setShowJoinModal(false);
       await loadLeague(id);
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to join league');
+      setToast({ message: error.response?.data?.message || 'Failed to join league', type: 'error' });
     } finally {
       setActionLoading(false);
     }
@@ -229,13 +231,12 @@ export default function LeagueDetail() {
         )}
 
         <div className="flex gap-2 mb-6">
-          {['overview', 'standings', 'teams'].map((tab) => (
+          {['overview', 'standings', 'fixtures', 'teams'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${
-                activeTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${activeTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+                }`}
             >
               {tab}
             </button>
@@ -305,8 +306,8 @@ export default function LeagueDetail() {
               </thead>
               <tbody>
                 {standings.map((team, idx) => (
-                  <tr 
-                    key={team.id} 
+                  <tr
+                    key={team.id}
                     className={`border-t border-gray-800 ${team.id === myTeam?.teamInstanceId ? 'bg-blue-900/20' : ''}`}
                   >
                     <td className="px-4 py-3 text-gray-400">{idx + 1}</td>
@@ -330,6 +331,10 @@ export default function LeagueDetail() {
               </tbody>
             </table>
           </div>
+        )}
+
+        {activeTab === 'fixtures' && (
+          <FixturesTab leagueId={id!} />
         )}
 
         {activeTab === 'teams' && (
@@ -374,7 +379,110 @@ export default function LeagueDetail() {
           />
         )}
       </div>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </Layout>
+  );
+}
+
+function FixturesTab({ leagueId }: { leagueId: string }) {
+  const [weeks, setWeeks] = useState<any[]>([]);
+  const [userTeamId, setUserTeamId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    loadFixtures();
+  }, [leagueId]);
+
+  const loadFixtures = async () => {
+    try {
+      const data = await leaguesApi.getFixturesGrouped(leagueId);
+      setWeeks(data.weeks || []);
+      setUserTeamId(data.userTeamInstanceId || null);
+    } catch (error) {
+      console.error('Failed to load fixtures:', error);
+      setWeeks([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <LoadingSpinner text="Loading fixtures..." />;
+  }
+
+  if (weeks.length === 0) {
+    return (
+      <div className="card p-8 text-center">
+        <p className="text-gray-400">No fixtures scheduled yet</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {weeks.map((week: any) => (
+        <div key={week.matchDay} className="card p-4">
+          <h3 className="text-lg font-bold text-white mb-4">Matchday {week.matchDay}</h3>
+          <div className="space-y-2">
+            {week.fixtures.map((f: any) => (
+              <div
+                key={f.id}
+                className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                  f.involvesUser ? 'bg-blue-900/30 border border-blue-500/50' : 'bg-gray-900/50 hover:bg-gray-900'
+                }`}
+              >
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="flex items-center gap-2 flex-1 justify-end">
+                    <span className="text-white font-medium">{f.homeTeamName}</span>
+                    <div
+                      className="w-4 h-4 rounded-full"
+                      style={{ backgroundColor: f.homeTeamColor }}
+                    />
+                  </div>
+
+                  <div className="px-4 py-1 bg-gray-800 rounded min-w-[60px] text-center">
+                    {f.status === 'Completed' && f.homeScore !== null ? (
+                      <span className="text-white font-bold">
+                        {f.homeScore} - {f.awayScore}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-sm">vs</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-1">
+                    <div
+                      className="w-4 h-4 rounded-full"
+                      style={{ backgroundColor: f.awayTeamColor }}
+                    />
+                    <span className="text-white font-medium">{f.awayTeamName}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 ml-4">
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    f.status === 'Completed' ? 'bg-green-900/50 text-green-400' :
+                    f.status === 'InProgress' ? 'bg-yellow-900/50 text-yellow-400' :
+                    'bg-gray-800 text-gray-400'
+                  }`}>
+                    {f.status}
+                  </span>
+                  {f.matchId && (
+                    <button
+                      onClick={() => navigate(`/match/${f.matchId}`)}
+                      className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded"
+                    >
+                      View
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
