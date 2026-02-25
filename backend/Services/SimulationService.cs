@@ -370,7 +370,6 @@ public class SimulationService : ISimulationService
         if (players.Count == 0) return 1.0f;
 
         var top11 = players.OrderByDescending(p =>
-        var top11 = players.OrderByDescending(p =>
             (p.Pace + p.Shooting + p.Passing + p.Dribbling + p.Defending + p.Physical) / 6f)
             .Take(11).ToList();
 
@@ -378,16 +377,13 @@ public class SimulationService : ISimulationService
         var avgFitness = (float)top11.Average(p => p.Fitness) / 100f;
         var avgForm = (float)top11.Average(p => p.Form) / 100f;
 
-        // Apply curves per governance spec
         var moraleCurved = ApplyCurve(avgMorale, gov.MoraleCurve);
         var formCurved = ApplyCurve(avgForm, gov.FormCurve);
 
-        // Weights determine sensitivity (governance spec: morale is HIGH-SENSITIVITY)
         var moraleContrib = moraleCurved * gov.MoraleWeight * 0.12f;
-        var fitnessContrib = avgFitness * 0.08f; // Fitness always linear, moderate impact
+        var fitnessContrib = avgFitness * 0.08f;
         var formContrib = formCurved * gov.FormWeight * 0.08f;
 
-        // Result: modifier from ~0.85 to ~1.28
         return 1.0f + moraleContrib + fitnessContrib + formContrib - 0.14f;
     }
 

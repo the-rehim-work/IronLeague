@@ -159,14 +159,19 @@ public class MatchEngine : IMatchEngine
             PlayerPositionsJson = JsonSerializer.Serialize(positions)
         };
 
-        match.States.Add(newState);
         match.CurrentTick = newTick;
 
         if (newTick == 2700) { match.Status = MatchStatus.HalfTime; match.Events.Add(new MatchEvent { Id = Guid.NewGuid(), MatchId = match.Id, Tick = newTick, Type = MatchEventType.HalfTime, Description = "Half Time", IsKeyEvent = true, IsImportantEvent = true }); }
         else if (newTick == 5400) { match.Status = MatchStatus.Finished; match.Events.Add(new MatchEvent { Id = Guid.NewGuid(), MatchId = match.Id, Tick = newTick, Type = MatchEventType.FullTime, Description = "Full Time", IsKeyEvent = true, IsImportantEvent = true }); }
         else match.Status = newTick < 2700 ? MatchStatus.FirstHalf : MatchStatus.SecondHalf;
 
-        await _db.SaveChangesAsync();
+        var hasKeyEvent = match.Events.Any(e => e.Tick == newTick && e.IsKeyEvent);
+        if (ShouldSnapshot(newTick, hasKeyEvent))
+            match.States.Add(newState);
+
+        if (newTick % 60 == 0 || hasKeyEvent || match.Status == MatchStatus.Finished)
+            await _db.SaveChangesAsync();
+
         return newState;
     }
 
@@ -237,5 +242,13 @@ public class MatchEngine : IMatchEngine
     {
         foreach (var kvp in positions.ToList())
             positions[kvp.Key] = new PlayerPositionDto(Math.Clamp(kvp.Value.X + (isHomePossession ? 2 : -2) + (_rng.NextSingle() - 0.5f) * 3, 0, 100), Math.Clamp(kvp.Value.Y + (_rng.NextSingle() - 0.5f) * 2, 0, 100), false);
+    }
+
+    private static bool ShouldSnapshot(int tick, bool hasKeyEvent)
+    {
+        if (tick == 0 || tick == 2700 || tick == 5400) return true;
+        if (hasKeyEvent) return true;
+        if (tick % 300 == 0) return true;
+        return false;
     }
 }

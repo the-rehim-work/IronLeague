@@ -6,6 +6,7 @@ using IronLeague.Data;
 using IronLeague.Services;
 using IronLeague.DTOs;
 using IronLeague.Entities;
+using System.Collections.Concurrent;
 
 namespace IronLeague.Hubs;
 
@@ -15,8 +16,8 @@ public class MatchHub : Hub
     private readonly IMatchService _matchService;
     private readonly IMatchEngine _matchEngine;
     private readonly AppDbContext _db;
-    private static readonly Dictionary<Guid, CancellationTokenSource> _runningMatches = new();
-    private static readonly Dictionary<Guid, HashSet<string>> _matchConnections = new();
+    private static readonly ConcurrentDictionary<Guid, CancellationTokenSource> _runningMatches = new();
+    private static readonly ConcurrentDictionary<Guid, ConcurrentDictionary<string, byte>> _matchConnections = new();
 
     public MatchHub(IMatchService matchService, IMatchEngine matchEngine, AppDbContext db)
     {
@@ -29,30 +30,34 @@ public class MatchHub : Hub
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, $"match_{matchId}");
 
-        lock (_matchConnections)
-        {
-            if (!_matchConnections.ContainsKey(matchId))
-                _matchConnections[matchId] = new HashSet<string>();
-            _matchConnections[matchId].Add(Context.ConnectionId);
-        }
+        var connections = _matchConnections.GetOrAdd(matchId, _ => new ConcurrentDictionary<string, byte>());
+        connections.TryAdd(Context.ConnectionId, 0);
 
         var match = await _matchService.GetMatchAsync(matchId);
         if (match != null)
+        {
             await Clients.Caller.SendAsync("MatchState", match);
+            await Clients.Caller.SendAsync("MatchInfo", new
+            {
+                HomeTeamName = match.HomeTeam.TeamName,
+                AwayTeamName = match.AwayTeam.TeamName,
+                HomeFormation = match.HomeTeam.Formation,
+                AwayFormation = match.AwayTeam.Formation,
+                Weather = match.Weather,
+                Attendance = match.Attendance
+            });
+        }
     }
 
     public async Task LeaveMatch(Guid matchId)
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"match_{matchId}");
 
-        lock (_matchConnections)
+        if (_matchConnections.TryGetValue(matchId, out var conns))
         {
-            if (_matchConnections.ContainsKey(matchId))
-            {
-                _matchConnections[matchId].Remove(Context.ConnectionId);
-                if (_matchConnections[matchId].Count == 0)
-                    _matchConnections.Remove(matchId);
-            }
+            conns.TryRemove(Context.ConnectionId, out _);
+            if (conns.IsEmpty)
+                _matchConnections.TryRemove(matchId, out _);
         }
     }
 
@@ -68,10 +73,18 @@ public class MatchHub : Hub
             }
 
             await Groups.AddToGroupAsync(Context.ConnectionId, $"match_{match.Id}");
-            await Clients.Group($"match_{match.Id}").SendAsync("MatchStarted", match);
+            await Clients.Group($"match_{match.Id}").SendAsync("MatchInfo", new
+            {
+                HomeTeamName = match.HomeTeam.TeamName,
+                AwayTeamName = match.AwayTeam.TeamName,
+                HomeFormation = match.HomeTeam.Formation,
+                AwayFormation = match.AwayTeam.Formation,
+                Weather = match.Weather,
+                Attendance = match.Attendance
+            });
 
             var cts = new CancellationTokenSource();
-            _runningMatches[match.Id] = cts;
+            _runningMatches.TryAdd(match.Id, cts);
             _ = RunMatchSimulation(match.Id, cts.Token);
         }
         catch (Exception ex)
@@ -248,11 +261,8 @@ public class MatchHub : Hub
         }
         finally
         {
-            _runningMatches.Remove(matchId);
-            lock (_matchConnections)
-            {
-                _matchConnections.Remove(matchId);
-            }
+            _runningMatches.TryRemove(matchId, out _);
+            _matchConnections.TryRemove(matchId, out _);
         }
     }
 
@@ -285,22 +295,15 @@ public class MatchHub : Hub
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        string? connectionId = Context.ConnectionId;
+        var connectionId = Context.ConnectionId;
 
-        lock (_matchConnections)
+        foreach (var kvp in _matchConnections)
         {
-            foreach (var matchId in _matchConnections.Keys.ToList())
+            kvp.Value.TryRemove(connectionId, out _);
+            if (kvp.Value.IsEmpty && _matchConnections.TryRemove(kvp.Key, out _))
             {
-                _matchConnections[matchId].Remove(connectionId);
-                if (_matchConnections[matchId].Count == 0)
-                {
-                    _matchConnections.Remove(matchId);
-                    if (_runningMatches.TryGetValue(matchId, out var cts))
-                    {
-                        cts.Cancel();
-                        _runningMatches.Remove(matchId);
-                    }
-                }
+                if (_runningMatches.TryRemove(kvp.Key, out var cts))
+                    cts.Cancel();
             }
         }
 
