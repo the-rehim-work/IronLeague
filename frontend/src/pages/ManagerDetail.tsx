@@ -1,164 +1,85 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import Layout from '../components/Layout';
-import LoadingSpinner from '../components/Loadingspinner';
-import { managersApi } from '../api';
-import type { Manager } from '../types';
-import { ArrowLeft, Trophy, Briefcase, Globe, DollarSign } from 'lucide-react';
-import { formatCurrency } from '../lib/utils';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Layout from '@/components/Layout';
+import Spinner from '@/components/Spinner';
+import { managersApi } from '@/api';
+import type { Country } from '@/types';
+import { ArrowLeft } from 'lucide-react';
 
-export default function ManagerDetail() {
-  const { id } = useParams<{ id: string }>();
+export default function CreateManager() {
   const navigate = useNavigate();
-  const [manager, setManager] = useState<Manager | null>(null);
+  const [name, setName] = useState('');
+  const [nationality, setNationality] = useState('');
+  const [earlyBonus, setEarlyBonus] = useState(false);
+  const [countries, setCountries] = useState<Country[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (id) loadManager(id);
-  }, [id]);
+    managersApi.getCountries().then((data) => {
+      setCountries(data);
+      if (data.length > 0) setNationality(data[0].code);
+    }).finally(() => setLoading(false));
+  }, []);
 
-  const loadManager = async (managerId: string) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !nationality) return;
+    setError('');
+    setSubmitting(true);
     try {
-      const data = await managersApi.getById(managerId);
-      setManager(data);
-    } catch (error) {
-      console.error('Failed to load manager:', error);
-      setError('Manager not found');
+      const manager = await managersApi.create({ name: name.trim(), nationality, earlyBonus });
+      navigate(`/managers/${manager.id}`);
+    } catch (err: unknown) {
+      setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to create manager');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  if (loading) {
-    return (
-      <Layout>
-        <div className="min-h-screen flex items-center justify-center">
-          <LoadingSpinner text="Loading manager..." />
-        </div>
-      </Layout>
-    );
-  }
-
-  if (error || !manager) {
-    return (
-      <Layout>
-        <div className="p-8">
-          <button
-            onClick={() => navigate('/managers')}
-            className="flex items-center gap-2 text-gray-400 hover:text-white mb-6"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back to Managers
-          </button>
-          <div className="card p-8 text-center">
-            <p className="text-red-400">{error || 'Manager not found'}</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
+  if (loading) return <Layout><div className="min-h-[60vh] flex items-center justify-center"><Spinner /></div></Layout>;
 
   return (
     <Layout>
-      <div className="p-8">
-        <button
-          onClick={() => navigate('/managers')}
-          className="flex items-center gap-2 text-gray-400 hover:text-white mb-6"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Managers
+      <div className="max-w-lg mx-auto">
+        <button onClick={() => navigate('/managers')} className="flex items-center gap-1.5 text-zinc-500 hover:text-white text-sm mb-5 transition-colors">
+          <ArrowLeft className="w-4 h-4" />Back to Managers
         </button>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1">
-            <div className="card p-6">
-              <div className="text-center mb-6">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold mx-auto mb-4">
-                  {manager.name[0]}
-                </div>
-                <h1 className="text-2xl font-bold text-white">{manager.name}</h1>
-                <p className="text-gray-400">{manager.nationality}</p>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Age</span>
-                  <span className="text-white font-medium">{manager.age}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Reputation</span>
-                  <span className="text-white font-medium">{manager.reputation}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Balance</span>
-                  <span className="text-green-400 font-medium">{formatCurrency(manager.personalBalance)}</span>
-                </div>
-                {manager.currentTeamName && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Current Team</span>
-                    <span className="text-blue-400 font-medium">{manager.currentTeamName}</span>
-                  </div>
-                )}
-              </div>
+        <div className="card p-6">
+          <h1 className="text-xl font-bold text-white mb-5">Create New Manager</h1>
+          {error && <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">{error}</div>}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="label">Manager Name</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="input" placeholder="Enter manager name" required maxLength={50} />
             </div>
-          </div>
-
-          <div className="lg:col-span-2 space-y-6">
-            <div className="card p-6">
-              <h2 className="text-xl font-bold text-white mb-4">Attributes</h2>
-              <div className="grid grid-cols-3 gap-6">
-                <div className="text-center">
-                  <div className="w-20 h-20 rounded-full border-4 border-blue-500 flex items-center justify-center mx-auto mb-2">
-                    <span className="text-2xl font-bold text-white">{manager.physical}</span>
-                  </div>
-                  <p className="text-gray-400">Physical</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-20 h-20 rounded-full border-4 border-purple-500 flex items-center justify-center mx-auto mb-2">
-                    <span className="text-2xl font-bold text-white">{manager.mental}</span>
-                  </div>
-                  <p className="text-gray-400">Mental</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-20 h-20 rounded-full border-4 border-green-500 flex items-center justify-center mx-auto mb-2">
-                    <span className="text-2xl font-bold text-white">{manager.technical}</span>
-                  </div>
-                  <p className="text-gray-400">Technical</p>
-                </div>
-              </div>
+            <div>
+              <label className="label">Nationality</label>
+              <select value={nationality} onChange={(e) => setNationality(e.target.value)} className="input" required>
+                {countries.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+              </select>
             </div>
-
-            <div className="card p-6">
-              <h2 className="text-xl font-bold text-white mb-4">Languages</h2>
-              {manager.languages.length === 0 ? (
-                <p className="text-gray-400">No languages recorded</p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {manager.languages.map((lang) => (
-                    <div key={lang.languageCode} className="flex items-center gap-2 px-3 py-2 bg-gray-900/50 rounded-lg">
-                      <Globe className="w-4 h-4 text-gray-400" />
-                      <span className="text-white">{lang.languageCode.toUpperCase()}</span>
-                      <span className="text-sm text-gray-400">({lang.proficiency}%)</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {!manager.currentTeamId && (
-              <div className="card p-6">
-                <h2 className="text-xl font-bold text-white mb-4">Find a Team</h2>
-                <p className="text-gray-400 mb-4">This manager is currently unemployed. Join a league to manage a team.</p>
-                <button
-                  onClick={() => navigate('/leagues')}
-                  className="btn-primary"
-                >
-                  Browse Leagues
-                </button>
+            <label className="flex items-start gap-3 p-3 bg-zinc-800/40 rounded-lg cursor-pointer border border-zinc-800 hover:border-zinc-700 transition-all">
+              <input type="checkbox" checked={earlyBonus} onChange={(e) => setEarlyBonus(e.target.checked)} className="mt-0.5 w-4 h-4 rounded border-zinc-600 bg-zinc-900 accent-sky-500" />
+              <div>
+                <p className="text-white text-sm font-medium">Early Career Bonus</p>
+                <p className="text-zinc-500 text-xs">+20 to all starting attributes. Recommended for first-timers.</p>
               </div>
-            )}
-          </div>
+            </label>
+            <div className="grid grid-cols-3 gap-3 p-3 bg-sky-500/5 border border-sky-500/20 rounded-lg">
+              {['Physical', 'Mental', 'Technical'].map((attr) => (
+                <div key={attr} className="text-center">
+                  <p className="text-zinc-500 text-xs">{attr}</p>
+                  <p className="text-lg font-bold text-white">{earlyBonus ? 60 : 40}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={() => navigate('/managers')} className="flex-1 btn-secondary">Cancel</button>
+              <button type="submit" disabled={submitting || !name.trim()} className="flex-1 btn-primary">{submitting ? 'Creating...' : 'Create Manager'}</button>
+            </div>
+          </form>
         </div>
       </div>
     </Layout>

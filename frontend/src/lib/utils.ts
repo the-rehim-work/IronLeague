@@ -1,34 +1,20 @@
-import { type ClassValue, clsx } from 'clsx';
+import { clsx, type ClassValue } from 'clsx';
 
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
 
-export function formatCurrency(amount: number, currency: string = 'EUR'): string {
-  if (amount >= 1000000) {
-    return `€${(amount / 1000000).toFixed(1)}M`;
-  }
-  if (amount >= 1000) {
-    return `€${(amount / 1000).toFixed(0)}K`;
-  }
+export function formatCurrency(amount: number): string {
+  if (amount >= 1_000_000) return `€${(amount / 1_000_000).toFixed(1)}M`;
+  if (amount >= 1_000) return `€${(amount / 1_000).toFixed(0)}K`;
   return `€${amount.toFixed(0)}`;
 }
 
 export function formatDate(date: string | Date): string {
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('en-GB', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
-  }).format(new Date(date));
-}
-
-export function formatDateTime(date: string | Date): string {
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
   }).format(new Date(date));
 }
 
@@ -36,47 +22,54 @@ export function getMatchMinute(tick: number): number {
   return Math.floor(tick / 60);
 }
 
-export function getPlayerOverall(player: { pace: number; shooting: number; passing: number; dribbling: number; defending: number; physical: number }): number {
-  return Math.round((player.pace + player.shooting + player.passing + player.dribbling + player.defending + player.physical) / 6);
+export function playerOverall(p: { pace: number; shooting: number; passing: number; dribbling: number; defending: number; physical: number }): number {
+  return Math.round((p.pace + p.shooting + p.passing + p.dribbling + p.defending + p.physical) / 6);
 }
 
-export function getPositionColor(position: string): string {
-  if (position === 'GK') return 'bg-yellow-500';
-  if (['CB', 'LB', 'RB', 'LWB', 'RWB'].includes(position)) return 'bg-blue-500';
-  if (['CDM', 'CM', 'CAM', 'LM', 'RM'].includes(position)) return 'bg-green-500';
-  if (['LW', 'RW', 'CF', 'ST'].includes(position)) return 'bg-red-500';
+export function positionColor(pos: string): string {
+  if (pos === 'GK') return 'bg-amber-500';
+  if (['CB', 'LB', 'RB', 'LWB', 'RWB'].includes(pos)) return 'bg-sky-500';
+  if (['CDM', 'CM', 'CAM', 'LM', 'RM'].includes(pos)) return 'bg-emerald-500';
+  if (['LW', 'RW', 'CF', 'ST'].includes(pos)) return 'bg-rose-500';
   return 'bg-gray-500';
 }
 
-export function getOverallColor(overall: number): string {
-  if (overall >= 85) return 'text-yellow-400';
-  if (overall >= 75) return 'text-green-400';
-  if (overall >= 65) return 'text-blue-400';
+export function ovrColor(ovr: number): string {
+  if (ovr >= 85) return 'text-yellow-400';
+  if (ovr >= 75) return 'text-emerald-400';
+  if (ovr >= 65) return 'text-sky-400';
   return 'text-gray-400';
 }
 
-export function getMoraleColor(value: number): string {
-  if (value >= 80) return 'text-green-400';
-  if (value >= 60) return 'text-green-300';
-  if (value >= 40) return 'text-yellow-400';
-  if (value >= 20) return 'text-orange-400';
+export function conditionColor(val: number): string {
+  if (val >= 80) return 'text-emerald-400';
+  if (val >= 60) return 'text-yellow-400';
+  if (val >= 40) return 'text-orange-400';
   return 'text-red-400';
 }
 
-export function getStatusBadgeClass(status: string): string {
+export function statBarColor(val: number): string {
+  if (val >= 85) return 'bg-emerald-500';
+  if (val >= 75) return 'bg-green-500';
+  if (val >= 65) return 'bg-yellow-500';
+  if (val >= 55) return 'bg-orange-500';
+  return 'bg-red-500';
+}
+
+export function statusBadge(status: string): string {
   switch (status) {
     case 'Active':
     case 'InProgress':
-      return 'bg-green-500/20 text-green-400';
+      return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
     case 'Lobby':
     case 'Scheduled':
-      return 'bg-blue-500/20 text-blue-400';
+      return 'bg-sky-500/20 text-sky-400 border-sky-500/30';
     case 'Completed':
     case 'Finished':
-      return 'bg-gray-500/20 text-gray-400';
+      return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     case 'Paused':
-      return 'bg-yellow-500/20 text-yellow-400';
+      return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
     default:
-      return 'bg-gray-500/20 text-gray-400';
+      return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
   }
 }

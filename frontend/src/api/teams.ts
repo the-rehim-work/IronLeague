@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { apiClient } from './client';
-import type { Team, Player } from '../types';
+import type { Team, TeamDetail, Player } from '@/types';
 
 export const teamsApi = {
   async getByLeague(leagueId: string): Promise<Team[]> {
@@ -8,8 +7,8 @@ export const teamsApi = {
     return data;
   },
 
-  async getDetail(teamInstanceId: string): Promise<any> {
-    const { data } = await apiClient.get(`/game/team/${teamInstanceId}/detail`);
+  async getDetail(teamInstanceId: string): Promise<TeamDetail> {
+    const { data } = await apiClient.get<TeamDetail>(`/game/team/${teamInstanceId}/detail`);
     return data;
   },
 

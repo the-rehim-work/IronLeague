@@ -1,54 +1,49 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios, { AxiosError } from 'axios';
-import type { ApiError } from '../types';
-
-const baseURL = '/api';
+import type { ApiError } from '@/types';
 
 export const apiClient = axios.create({
-  baseURL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true,
+  baseURL: 'http://localhost:5000/api',
+  headers: { 'Content-Type': 'application/json' },
 });
 
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('il_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (res) => res,
   (error: AxiosError<ApiError>) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      localStorage.removeItem('il_token');
+      localStorage.removeItem('il_user');
       window.location.href = '/login';
     }
     return Promise.reject(error);
   }
 );
 
-export const setAuthToken = (token: string) => {
-  localStorage.setItem('token', token);
-};
+export function setAuthToken(token: string) {
+  localStorage.setItem('il_token', token);
+}
 
-export const clearAuthToken = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-};
+export function clearAuth() {
+  localStorage.removeItem('il_token');
+  localStorage.removeItem('il_user');
+}
 
-export const getStoredUser = (): any | null => {
-  const user = localStorage.getItem('user');
-  return user ? JSON.parse(user) : null;
-};
+export function getStoredUser() {
+  try {
+    const raw = localStorage.getItem('il_user');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
 
-export const setStoredUser = (user: any) => {
-  localStorage.setItem('user', JSON.stringify(user));
-};
+export function setStoredUser(user: unknown) {
+  localStorage.setItem('il_user', JSON.stringify(user));
+}

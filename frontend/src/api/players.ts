@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { apiClient } from './client';
-import type { Player } from '../types';
+import type { Player } from '@/types';
 
 export const playersApi = {
-  async getById(playerId: string): Promise<any> {
-    const { data } = await apiClient.get(`/game/player/${playerId}`);
+  async getById(playerId: string): Promise<Player> {
+    const { data } = await apiClient.get<Player>(`/game/player/${playerId}`);
     return data;
   },
 

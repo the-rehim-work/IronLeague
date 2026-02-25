@@ -1,30 +1,29 @@
 import { create } from 'zustand';
-import type { User, Manager } from '../types';
-import { authApi } from '../api';
+import type { User, Manager } from '@/types';
+import { authApi } from '@/api/auth';
 
 interface AuthState {
   user: User | null;
   managers: Manager[];
-  currentManager: Manager | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 
   login: (userOrEmail: string, password: string) => Promise<void>;
   register: (userName: string, password: string, email?: string, displayName?: string) => Promise<void>;
   logout: () => void;
-  setCurrentManager: (manager: Manager | null) => void;
+  setUser: (user: User) => void;
   setManagers: (managers: Manager[]) => void;
+  setLoading: (v: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   managers: [],
-  currentManager: null,
   isAuthenticated: false,
   isLoading: true,
 
   login: async (userOrEmail, password) => {
-    const { user } = await authApi.login({ userOrEmail, password });
+    const { user } = await authApi.login(userOrEmail, password);
     set({ user, isAuthenticated: true });
   },
 
@@ -35,14 +34,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     authApi.logout();
-    set({ user: null, managers: [], currentManager: null, isAuthenticated: false });
+    set({ user: null, managers: [], isAuthenticated: false });
   },
 
-  setCurrentManager: (manager) => {
-    set({ currentManager: manager });
-  },
-
-  setManagers: (managers) => {
-    set({ managers });
-  },
+  setUser: (user) => set({ user, isAuthenticated: true }),
+  setManagers: (managers) => set({ managers }),
+  setLoading: (isLoading) => set({ isLoading }),
 }));

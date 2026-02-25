@@ -3,8 +3,8 @@ export interface User {
   userName: string;
   email: string;
   displayName: string;
-  avatarId: string;
   isAdmin: boolean;
+  roles: string[];
   matchesPlayed: number;
   matchesWon: number;
   matchesDrawn: number;
@@ -97,7 +97,20 @@ export interface Player {
   isSpecialLegend: boolean;
   teamId?: string;
   teamName?: string;
-  languages: string[];
+  languages: PlayerLanguage[];
+  contract?: ContractInfo;
+}
+
+export interface PlayerLanguage {
+  languageCode: string;
+  isNative: boolean;
+}
+
+export interface ContractInfo {
+  weeklyWage: number;
+  startDate: string;
+  endDate: string;
+  releaseClause?: number;
 }
 
 export type Position = 'GK' | 'CB' | 'LB' | 'RB' | 'LWB' | 'RWB' | 'CDM' | 'CM' | 'CAM' | 'LM' | 'RM' | 'LW' | 'RW' | 'CF' | 'ST';
@@ -114,10 +127,22 @@ export interface LeagueInstance {
   currentSeason: number;
   currentDate: string;
   status: LeagueStatus;
-  governance: GovernanceSettings;
+  governance?: GovernanceSettings;
 }
 
 export type LeagueStatus = 'Lobby' | 'Active' | 'Paused' | 'Completed';
+
+export interface LeagueTeam {
+  id: string;
+  baseTeamId: string;
+  name: string;
+  shortName: string;
+  primaryColor: string;
+  secondaryColor: string;
+  isControlledByPlayer: boolean;
+  managerId?: string;
+  managerName?: string;
+}
 
 export interface LeagueTeamInstance {
   id: string;
@@ -140,12 +165,9 @@ export interface LeagueTeamInstance {
 export interface Competition {
   id: string;
   name: string;
-  type: CompetitionType;
-  status: CompetitionStatus;
+  type: string;
+  status: string;
 }
-
-export type CompetitionType = 'League' | 'Cup' | 'GroupAndKnockout';
-export type CompetitionStatus = 'Scheduled' | 'InProgress' | 'Completed';
 
 export interface Fixture {
   id: string;
@@ -160,20 +182,16 @@ export interface Fixture {
   scheduledDate: string;
   matchDay?: number;
   round?: string;
-  status: FixtureStatus;
+  status: string;
   match?: MatchSummary;
 }
-
-export type FixtureStatus = 'Scheduled' | 'InProgress' | 'Completed' | 'Cancelled' | 'Postponed';
 
 export interface MatchSummary {
   id: string;
   homeScore: number;
   awayScore: number;
-  status: MatchStatus;
+  status: string;
 }
-
-export type MatchStatus = 'NotStarted' | 'FirstHalf' | 'HalfTime' | 'SecondHalf' | 'ExtraTimeFirst' | 'ExtraTimeSecond' | 'Penalties' | 'Finished' | 'Abandoned';
 
 export interface Match {
   id: string;
@@ -182,21 +200,20 @@ export interface Match {
   awayScore: number;
   currentTick: number;
   totalTicks: number;
-  status: MatchStatus;
-  weather: WeatherType;
+  status: string;
+  weather: string;
   attendance: number;
   homeTeam: MatchTeam;
   awayTeam: MatchTeam;
   events: MatchEvent[];
 }
 
-export type WeatherType = 'Clear' | 'Cloudy' | 'Rainy' | 'Snowy' | 'Foggy' | 'Windy' | 'Hot' | 'Cold';
-
 export interface MatchTeam {
   teamId: string;
   teamName: string;
   formation: string;
   tactics: string;
+  primaryColor?: string;
   speechesUsed: number;
   pausesUsed: number;
   players: MatchPlayer[];
@@ -215,7 +232,7 @@ export interface MatchEvent {
   id: string;
   tick: number;
   minute: number;
-  type: MatchEventType;
+  type: string;
   primaryPlayerName?: string;
   secondaryPlayerName?: string;
   isHomeTeam: boolean;
@@ -226,73 +243,137 @@ export interface MatchEvent {
   positionY?: number;
 }
 
-export type MatchEventType =
-  | 'KickOff' | 'Goal' | 'OwnGoal' | 'Assist' | 'Shot' | 'ShotOnTarget' | 'ShotBlocked' | 'Save'
-  | 'Pass' | 'KeyPass' | 'Tackle' | 'Interception' | 'Foul' | 'YellowCard' | 'RedCard'
-  | 'Injury' | 'Substitution' | 'Corner' | 'FreeKick' | 'Penalty' | 'PenaltyMissed' | 'PenaltySaved'
-  | 'Offside' | 'HalfTime' | 'FullTime' | 'ExtraTime' | 'PenaltyShootout'
-  | 'Speech' | 'TacticalChange' | 'Pause' | 'Resume' | 'MomentumShift' | 'PressureBuildup'
-  | 'CounterAttack' | 'SetPiece';
-
 export interface MatchState {
   tick: number;
   ballX: number;
   ballY: number;
+  homeScore: number;
+  awayScore: number;
+  status: string;
   isHomeTeamPossession: boolean;
   homeMomentum: number;
   awayMomentum: number;
-  playerPositions: Record<string, PlayerPosition>;
 }
 
-export interface PlayerPosition {
-  x: number;
-  y: number;
-  hasBall: boolean;
+export interface FixtureWeek {
+  matchDay: number;
+  weekStart: string;
+  fixtures: GroupedFixture[];
 }
 
-export interface GovernanceSettings {
-  presetName: string;
-  crowdWeight: number;
-  crowdCurve: CurveType;
-  crowdCombination: CombinationMethod;
-  languageWeight: number;
-  languageCurve: CurveType;
-  languageCombination: CombinationMethod;
-  moraleWeight: number;
-  moraleCurve: CurveType;
-  moraleCombination: CombinationMethod;
-  speechWeight: number;
-  speechCurve: CurveType;
-  speechCombination: CombinationMethod;
-  pressureWeight: number;
-  pressureCurve: CurveType;
-  pressureCombination: CombinationMethod;
-  weatherWeight: number;
-  weatherCurve: CurveType;
-  weatherCombination: CombinationMethod;
-  refereeWeight: number;
-  refereeCurve: CurveType;
-  refereeCombination: CombinationMethod;
-  chemistryWeight: number;
-  chemistryCurve: CurveType;
-  chemistryCombination: CombinationMethod;
-  rngChaosWeight: number;
-  experienceWeight: number;
-  experienceCurve: CurveType;
-  formWeight: number;
-  formCurve: CurveType;
-  managerReputationWeight: number;
-  managerReputationCurve: CurveType;
-  scandalWeight: number;
-  scandalCurve: CurveType;
+export interface GroupedFixture {
+  id: string;
+  homeTeamId: string;
+  homeTeamName: string;
+  homeTeamColor: string;
+  awayTeamId: string;
+  awayTeamName: string;
+  awayTeamColor: string;
+  scheduledDate: string;
+  status: string;
+  homeScore?: number;
+  awayScore?: number;
+  matchId?: string;
+  involvesUser: boolean;
 }
 
-export type CurveType = 'Linear' | 'Diminishing' | 'Threshold' | 'Exponential' | 'Soft';
-export type CombinationMethod = 'DirectOverride' | 'AdditiveContribution' | 'ConditionalGate' | 'VarianceControl';
+export interface GroupedFixturesResponse {
+  userTeamInstanceId: string | null;
+  weeks: FixtureWeek[];
+}
+
+export interface SimulationResult {
+  success: boolean;
+  newDate: string;
+  simulatedMatches: SimMatch[];
+  playerMatchUpcoming?: GroupedFixture;
+  message?: string;
+}
+
+export interface SimMatch {
+  fixtureId: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeScore: number;
+  awayScore: number;
+  involvesPlayer: boolean;
+}
+
+export interface TeamDetail {
+  teamInstanceId: string;
+  baseTeamId: string;
+  name: string;
+  shortName: string;
+  primaryColor: string;
+  secondaryColor: string;
+  stadiumName: string;
+  stadiumCapacity: number;
+  wageBudget: number;
+  transferBudget: number;
+  totalBalance: number;
+  fanLoyalty: number;
+  fanMood: number;
+  isControlledByPlayer: boolean;
+  managerName?: string;
+  standings: TeamStandings;
+  squad: SquadPlayer[];
+  staff: StaffMember[];
+}
+
+export interface TeamStandings {
+  points: number;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+}
+
+export interface SquadPlayer {
+  id: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  position: string;
+  secondaryPosition?: string;
+  age: number;
+  nationality: string;
+  pace: number;
+  shooting: number;
+  passing: number;
+  dribbling: number;
+  defending: number;
+  physical: number;
+  overall: number;
+  potential: number;
+  morale: number;
+  fitness: number;
+  form: number;
+  marketValue: number;
+}
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  role: string;
+  ability: number;
+}
+
+export interface MyTeamResponse {
+  teamInstanceId: string;
+  name: string;
+  shortName: string;
+  primaryColor: string;
+  secondaryColor: string;
+  standings: TeamStandings;
+  squad: SquadPlayer[];
+}
 
 export interface Notification {
   id: string;
-  type: NotificationType;
+  type: string;
   title: string;
   message: string;
   linkUrl?: string;
@@ -300,23 +381,126 @@ export interface Notification {
   createdAt: string;
 }
 
-export type NotificationType = 'System' | 'MatchResult' | 'Transfer' | 'LeagueInvite' | 'FriendRequest' | 'Achievement' | 'ManagerOffer' | 'SeasonEnd' | 'Injury' | 'Scandal';
-
-export interface Speech {
-  type: SpeechType;
-  target: SpeechTarget;
-  targetPlayerId?: string;
-  tone: SpeechTone;
+export interface TacticDto {
+  id: string;
+  teamInstanceId: string;
+  name: string;
+  formation: string;
+  defensiveLine: number;
+  width: number;
+  tempo: number;
+  pressing: number;
+  counterAttack: boolean;
+  playOutFromBack: boolean;
+  directPassing: boolean;
+  highPress: boolean;
+  parkTheBus: boolean;
+  isDefault: boolean;
 }
 
-export type SpeechType = 'Motivational' | 'Tactical' | 'Calm' | 'Aggressive' | 'Encouragement' | 'Warning';
-export type SpeechTarget = 'WholeTeam' | 'SinglePlayer';
-export type SpeechTone = 'Calm' | 'Passionate' | 'Aggressive' | 'Supportive' | 'Critical';
+export interface CreateTacticDto {
+  name: string;
+  formation: string;
+  defensiveLine: number;
+  width: number;
+  tempo: number;
+  pressing: number;
+  counterAttack: boolean;
+  playOutFromBack: boolean;
+  directPassing: boolean;
+  highPress: boolean;
+  parkTheBus: boolean;
+}
 
-export interface TacticalChange {
-  newFormation?: string;
-  newTactics?: string;
-  playerInstructions?: Record<string, string>;
+export interface TrainingSessionDto {
+  id: string;
+  teamInstanceId: string;
+  type: string;
+  intensity: number;
+  focusAttribute?: string;
+  excludedPlayerIds: string[];
+  results: TrainingResult[];
+  processedAt?: string;
+}
+
+export interface TrainingResult {
+  playerName: string;
+  fitnessChange: number;
+  moraleChange: number;
+  attributeImproved?: string;
+}
+
+export interface GovernanceSettings {
+  presetName: string;
+  crowdWeight: number;
+  languageWeight: number;
+  moraleWeight: number;
+  speechWeight: number;
+  pressureWeight: number;
+  weatherWeight: number;
+  refereeWeight: number;
+  chemistryWeight: number;
+  rngChaosWeight: number;
+  experienceWeight: number;
+  formWeight: number;
+  managerReputationWeight: number;
+  scandalWeight: number;
+}
+
+export interface PressEventDto {
+  id: string;
+  leagueInstanceId: string;
+  headline: string;
+  content: string;
+  type: string;
+  createdAt: string;
+  reputationImpact: number;
+  moraleImpact: number;
+  fanMoodImpact: number;
+}
+
+export interface TransferOfferDto {
+  playerId: string;
+  offeredFee: number;
+  offeredWage: number;
+  contractYears: number;
+  isLoan: boolean;
+  loanFee?: number;
+  loanWage?: number;
+}
+
+export interface FriendshipDto {
+  id: string;
+  userId: string;
+  userName: string;
+  displayName: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface LeagueInviteDto {
+  id: string;
+  leagueInstanceId: string;
+  leagueName: string;
+  invitedByName: string;
+  createdAt: string;
+}
+
+export interface ChatThread {
+  threadId: string;
+  withUserName: string;
+  withDisplayName: string;
+  lastMessage?: string;
+  lastMessageAt?: string;
+  unreadCount: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  threadId: string;
+  senderUserName: string;
+  content: string;
+  sentAt: string;
 }
 
 export interface ApiError {

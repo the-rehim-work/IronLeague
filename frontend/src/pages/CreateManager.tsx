@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Layout from '../components/Layout';
-import LoadingSpinner from '../components/Loadingspinner';
-import { managersApi } from '../api';
-import type { Country } from '../types';
+import Layout from '@/components/Layout';
+import Spinner from '@/components/Spinner';
+import { managersApi } from '@/api';
+import type { Country } from '@/types';
 import { ArrowLeft } from 'lucide-react';
 
 export default function CreateManager() {
@@ -18,155 +17,67 @@ export default function CreateManager() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    loadCountries();
-  }, []);
-
-  const loadCountries = async () => {
-    try {
-      const data = await managersApi.getCountries();
+    managersApi.getCountries().then((data) => {
       setCountries(data);
-      if (data.length > 0) {
-        setNationality(data[0].code);
-      }
-    } catch (error) {
-      console.error('Failed to load countries:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (data.length > 0) setNationality(data[0].code);
+    }).finally(() => setLoading(false));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !nationality) return;
-
     setError('');
     setSubmitting(true);
-
     try {
-      const manager = await managersApi.create({
-        name: name.trim(),
-        nationality,
-        earlyBonus,
-      });
+      const manager = await managersApi.create({ name: name.trim(), nationality, earlyBonus });
       navigate(`/managers/${manager.id}`);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create manager');
+    } catch (err: unknown) {
+      setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to create manager');
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) {
-    return (
-      <Layout>
-        <div className="min-h-screen flex items-center justify-center">
-          <LoadingSpinner text="Loading..." />
-        </div>
-      </Layout>
-    );
-  }
+  if (loading) return <Layout><div className="min-h-[60vh] flex items-center justify-center"><Spinner /></div></Layout>;
 
   return (
     <Layout>
-      <div className="p-8 max-w-2xl mx-auto">
-        <button
-          onClick={() => navigate('/managers')}
-          className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Managers
+      <div className="max-w-lg mx-auto">
+        <button onClick={() => navigate('/managers')} className="flex items-center gap-1.5 text-zinc-500 hover:text-white text-sm mb-5 transition-colors">
+          <ArrowLeft className="w-4 h-4" />Back to Managers
         </button>
-
-        <div className="card p-8">
-          <h1 className="text-2xl font-bold text-white mb-6">Create New Manager</h1>
-
-          {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-lg text-red-400">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="card p-6">
+          <h1 className="text-xl font-bold text-white mb-5">Create New Manager</h1>
+          {error && <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">{error}</div>}
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="label">Manager Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="input"
-                placeholder="Enter manager name"
-                required
-                maxLength={50}
-              />
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="input" placeholder="Enter manager name" required maxLength={50} />
             </div>
-
             <div>
               <label className="label">Nationality</label>
-              <select
-                value={nationality}
-                onChange={(e) => setNationality(e.target.value)}
-                className="input"
-                required
-              >
-                {countries.map((country) => (
-                  <option key={country.code} value={country.code}>
-                    {country.name}
-                  </option>
-                ))}
+              <select value={nationality} onChange={(e) => setNationality(e.target.value)} className="input" required>
+                {countries.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
               </select>
             </div>
-
-            <div className="card p-4 bg-gray-900/50">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={earlyBonus}
-                  onChange={(e) => setEarlyBonus(e.target.checked)}
-                  className="mt-1 w-5 h-5 rounded border-gray-600 bg-gray-900 text-blue-500 focus:ring-blue-500"
-                />
-                <div>
-                  <p className="text-white font-medium">Early Career Bonus</p>
-                  <p className="text-sm text-gray-400">
-                    Start with +20 to Physical, Mental, and Technical attributes. 
-                    Recommended for first-time managers.
-                  </p>
-                </div>
-              </label>
-            </div>
-
-            <div className="card p-4 bg-blue-500/10 border-blue-500/30">
-              <h3 className="text-white font-medium mb-2">Starting Attributes Preview</h3>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-gray-400 text-sm">Physical</p>
-                  <p className="text-xl font-bold text-white">{earlyBonus ? 60 : 40}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm">Mental</p>
-                  <p className="text-xl font-bold text-white">{earlyBonus ? 60 : 40}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm">Technical</p>
-                  <p className="text-xl font-bold text-white">{earlyBonus ? 60 : 40}</p>
-                </div>
+            <label className="flex items-start gap-3 p-3 bg-zinc-800/40 rounded-lg cursor-pointer border border-zinc-800 hover:border-zinc-700 transition-all">
+              <input type="checkbox" checked={earlyBonus} onChange={(e) => setEarlyBonus(e.target.checked)} className="mt-0.5 w-4 h-4 rounded border-zinc-600 bg-zinc-900 accent-sky-500" />
+              <div>
+                <p className="text-white text-sm font-medium">Early Career Bonus</p>
+                <p className="text-zinc-500 text-xs">+20 to all starting attributes. Recommended for first-timers.</p>
               </div>
+            </label>
+            <div className="grid grid-cols-3 gap-3 p-3 bg-sky-500/5 border border-sky-500/20 rounded-lg">
+              {['Physical', 'Mental', 'Technical'].map((attr) => (
+                <div key={attr} className="text-center">
+                  <p className="text-zinc-500 text-xs">{attr}</p>
+                  <p className="text-lg font-bold text-white">{earlyBonus ? 60 : 40}</p>
+                </div>
+              ))}
             </div>
-
-            <div className="flex gap-4">
-              <button
-                type="button"
-                onClick={() => navigate('/managers')}
-                className="flex-1 btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitting || !name.trim()}
-                className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting ? 'Creating...' : 'Create Manager'}
-              </button>
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={() => navigate('/managers')} className="flex-1 btn-secondary">Cancel</button>
+              <button type="submit" disabled={submitting || !name.trim()} className="flex-1 btn-primary">{submitting ? 'Creating...' : 'Create Manager'}</button>
             </div>
           </form>
         </div>

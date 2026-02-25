@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../stores/authStore';
-import { Gamepad2 } from 'lucide-react';
+import { useAuthStore } from '@/stores/authStore';
+import { Swords } from 'lucide-react';
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -13,7 +12,6 @@ export default function Login() {
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
   const { login, register } = useAuthStore();
   const navigate = useNavigate();
 
@@ -21,12 +19,12 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       await login(userOrEmail, password);
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(msg || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -36,42 +34,44 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
-      await register(userName, password, email, displayName);
+      await register(userName, password, email || undefined, displayName || undefined);
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(msg || 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-sky-900/20 via-transparent to-transparent" />
+
+      <div className="w-full max-w-sm relative z-10">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Gamepad2 className="w-12 h-12 text-blue-500" />
-            <h1 className="text-5xl font-bold text-white">IRON LEAGUE</h1>
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <Swords className="w-10 h-10 text-sky-500" />
           </div>
-          <p className="text-gray-400">Manage. Compete. Dominate.</p>
+          <h1 className="text-4xl font-bold text-white tracking-tight">IRON LEAGUE</h1>
+          <p className="text-zinc-500 text-sm mt-1">Football Manager</p>
         </div>
 
-        <div className="card p-8">
-          <div className="flex mb-6 bg-gray-900/50 rounded-lg p-1">
+        <div className="card p-6">
+          <div className="flex mb-5 bg-zinc-800/60 rounded-lg p-1 gap-1">
             <button
               onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2 px-4 rounded-md transition ${
-                isLogin ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
+              className={`flex-1 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${
+                isLogin ? 'bg-sky-600 text-white shadow-lg' : 'text-zinc-400 hover:text-white'
               }`}
             >
               Login
             </button>
             <button
               onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2 px-4 rounded-md transition ${
-                !isLogin ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
+              className={`flex-1 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${
+                !isLogin ? 'bg-sky-600 text-white shadow-lg' : 'text-zinc-400 hover:text-white'
               }`}
             >
               Register
@@ -79,7 +79,7 @@ export default function Login() {
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500 rounded-md text-red-500 text-sm">
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
               {error}
             </div>
           )}
@@ -97,7 +97,6 @@ export default function Login() {
                   required
                 />
               </div>
-
               <div>
                 <label className="label">Password</label>
                 <input
@@ -109,12 +108,7 @@ export default function Login() {
                   required
                 />
               </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <button type="submit" disabled={loading} className="w-full btn-primary py-2.5">
                 {loading ? 'Logging in...' : 'Login'}
               </button>
             </form>
@@ -122,63 +116,29 @@ export default function Login() {
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
                 <label className="label">Username</label>
-                <input
-                  type="text"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  className="input"
-                  placeholder="Choose a username"
-                  required
-                />
+                <input type="text" value={userName} onChange={(e) => setUserName(e.target.value)} className="input" placeholder="Choose a username" required />
               </div>
-
               <div>
-                <label className="label">Email (optional)</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input"
-                  placeholder="Your email"
-                />
+                <label className="label">Email <span className="text-zinc-600">(optional)</span></label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input" placeholder="Your email" />
               </div>
-
               <div>
-                <label className="label">Display Name (optional)</label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="input"
-                  placeholder="How others see you"
-                />
+                <label className="label">Display Name <span className="text-zinc-600">(optional)</span></label>
+                <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="input" placeholder="How others see you" />
               </div>
-
               <div>
                 <label className="label">Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="input"
-                  placeholder="Create a password (min 6 chars)"
-                  required
-                />
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input" placeholder="Min 6 characters" required />
               </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <button type="submit" disabled={loading} className="w-full btn-primary py-2.5">
                 {loading ? 'Creating account...' : 'Register'}
               </button>
             </form>
           )}
 
-          <div className="mt-6 text-center text-sm text-gray-400">
-            <p>Demo credentials: <span className="text-white">Admin</span> / <span className="text-white">Admin123!</span></p>
-          </div>
+          <p className="mt-5 text-center text-xs text-zinc-600">
+            Demo: <span className="text-zinc-400">Admin</span> / <span className="text-zinc-400">Admin123!</span>
+          </p>
         </div>
       </div>
     </div>
