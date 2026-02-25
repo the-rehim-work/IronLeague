@@ -616,32 +616,30 @@ function Layout({ children }: { children: ReactNode }) {
   );
 }
 
-function Pitch2D({ match }: { match?: Match }) {
-  const ballX = 50;
-  const ballY = 50;
-
+function Pitch2D({ match, homeColor = '#06b6d4', awayColor = '#f97316' }: { match?: Match; homeColor?: string; awayColor?: string }) {
   const parseFormation = (formation: string): number[] => {
     const parts = formation.split('-').map(n => parseInt(n) || 4);
-    return [1, ...parts];
+    return [1, ...parts]; // GK + outfield lines
   };
 
   const getPlayerPositions = (formation: string, isHome: boolean): { x: number; y: number }[] => {
     const lines = parseFormation(formation);
     const positions: { x: number; y: number }[] = [];
-
     const totalLines = lines.length;
+    
     lines.forEach((count, lineIndex) => {
-      const x = isHome
-        ? 5 + (lineIndex * 90 / totalLines)
-        : 95 - (lineIndex * 90 / totalLines);
-
+      const x = isHome 
+        ? 8 + (lineIndex * 80 / totalLines) 
+        : 92 - (lineIndex * 80 / totalLines);
+      
       for (let i = 0; i < count; i++) {
         const y = count === 1 ? 50 : 15 + (i * 70 / (count - 1));
         positions.push({ x, y });
       }
     });
-
-    return positions;
+    
+    // CRITICAL: Always return exactly 11 players
+    return positions.slice(0, 11);
   };
 
   const homeFormation = match?.homeTeam?.formation || '4-4-2';
@@ -650,95 +648,42 @@ function Pitch2D({ match }: { match?: Match }) {
   const awayPositions = getPlayerPositions(awayFormation, false);
 
   const lastEvent = match?.events?.filter(e => e.positionX !== undefined).slice(-1)[0];
-  const eventBallX = lastEvent?.positionX ?? ballX;
-  const eventBallY = lastEvent?.positionY ?? ballY;
+  const ballX = lastEvent?.positionX ?? 50;
+  const ballY = lastEvent?.positionY ?? 50;
 
   return (
-    <div className="relative w-full aspect-[16/10] bg-gradient-to-b from-emerald-800 to-emerald-900 rounded-xl overflow-hidden border-4 border-white/20">
-      {/* Pitch markings */}
+    <div className="relative w-full aspect-[16/10] bg-gradient-to-b from-emerald-700 to-emerald-800 rounded-xl overflow-hidden border-4 border-white/30">
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-        {/* Center line */}
-        <line x1="50" y1="0" x2="50" y2="100" stroke="white" strokeOpacity="0.3" strokeWidth="0.3" />
-        {/* Center circle */}
-        <circle cx="50" cy="50" r="10" fill="none" stroke="white" strokeOpacity="0.3" strokeWidth="0.3" />
-        <circle cx="50" cy="50" r="0.5" fill="white" fillOpacity="0.5" />
-        {/* Penalty boxes */}
-        <rect x="0" y="20" width="16" height="60" fill="none" stroke="white" strokeOpacity="0.3" strokeWidth="0.3" />
-        <rect x="84" y="20" width="16" height="60" fill="none" stroke="white" strokeOpacity="0.3" strokeWidth="0.3" />
-        {/* Goal boxes */}
-        <rect x="0" y="35" width="6" height="30" fill="none" stroke="white" strokeOpacity="0.3" strokeWidth="0.3" />
-        <rect x="94" y="35" width="6" height="30" fill="none" stroke="white" strokeOpacity="0.3" strokeWidth="0.3" />
-        {/* Goals */}
-        <rect x="-2" y="42" width="2" height="16" fill="white" fillOpacity="0.2" />
-        <rect x="100" y="42" width="2" height="16" fill="white" fillOpacity="0.2" />
+        <line x1="50" y1="0" x2="50" y2="100" stroke="white" strokeOpacity="0.4" strokeWidth="0.3" />
+        <circle cx="50" cy="50" r="12" fill="none" stroke="white" strokeOpacity="0.4" strokeWidth="0.3" />
+        <circle cx="50" cy="50" r="0.8" fill="white" fillOpacity="0.6" />
+        <rect x="0" y="18" width="16" height="64" fill="none" stroke="white" strokeOpacity="0.4" strokeWidth="0.3" />
+        <rect x="84" y="18" width="16" height="64" fill="none" stroke="white" strokeOpacity="0.4" strokeWidth="0.3" />
+        <rect x="0" y="32" width="6" height="36" fill="none" stroke="white" strokeOpacity="0.4" strokeWidth="0.3" />
+        <rect x="94" y="32" width="6" height="36" fill="none" stroke="white" strokeOpacity="0.4" strokeWidth="0.3" />
       </svg>
 
-      {/* Home players (cyan/blue) */}
       {homePositions.map((pos, i) => (
-        <div
-          key={`home-${i}`}
-          className="absolute transition-all duration-1000 ease-out"
-          style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)' }}
-        >
-          {/* Torso icon */}
-          <div className="relative">
-            <svg width="24" height="28" viewBox="0 0 24 28" className="drop-shadow-lg">
-              {/* Head */}
-              <circle cx="12" cy="6" r="5" fill="#06b6d4" stroke="#0891b2" strokeWidth="1" />
-              {/* Body/Torso */}
-              <path d="M4 28 L6 14 C6 11 8 10 12 10 C16 10 18 11 18 14 L20 28 Z"
-                fill="#06b6d4" stroke="#0891b2" strokeWidth="1" />
-              {/* Jersey number */}
-              <text x="12" y="22" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">
-                {i + 1}
-              </text>
-            </svg>
+        <div key={`h${i}`} className="absolute transition-all duration-700" style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)' }}>
+          <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-lg border-2 border-white/60" style={{ backgroundColor: homeColor }}>
+            {i + 1}
           </div>
         </div>
       ))}
 
-      {/* Away players (orange/red) */}
       {awayPositions.map((pos, i) => (
-        <div
-          key={`away-${i}`}
-          className="absolute transition-all duration-1000 ease-out"
-          style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)' }}
-        >
-          <div className="relative">
-            <svg width="24" height="28" viewBox="0 0 24 28" className="drop-shadow-lg">
-              <circle cx="12" cy="6" r="5" fill="#f97316" stroke="#ea580c" strokeWidth="1" />
-              <path d="M4 28 L6 14 C6 11 8 10 12 10 C16 10 18 11 18 14 L20 28 Z"
-                fill="#f97316" stroke="#ea580c" strokeWidth="1" />
-              <text x="12" y="22" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">
-                {i + 1}
-              </text>
-            </svg>
+        <div key={`a${i}`} className="absolute transition-all duration-700" style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)' }}>
+          <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-lg border-2 border-white/60" style={{ backgroundColor: awayColor }}>
+            {i + 1}
           </div>
         </div>
       ))}
 
-      {/* Ball */}
-      <div
-        className="absolute w-4 h-4 bg-white rounded-full shadow-lg transition-all duration-500 z-10"
-        style={{
-          left: `${eventBallX}%`,
-          top: `${eventBallY}%`,
-          transform: 'translate(-50%, -50%)',
-          boxShadow: '0 0 10px rgba(255,255,255,0.5)'
-        }}
-      >
-        {/* Ball pattern */}
-        <div className="absolute inset-0 rounded-full border border-zinc-400" />
-      </div>
-
-      {/* Event indicator */}
+      <div className="absolute w-4 h-4 bg-white rounded-full shadow-lg transition-all duration-500 z-10 border-2 border-zinc-300" 
+           style={{ left: `${ballX}%`, top: `${ballY}%`, transform: 'translate(-50%, -50%)', boxShadow: '0 0 12px rgba(255,255,255,0.6)' }} />
+      
       {lastEvent?.type === 'Goal' && (
-        <div
-          className="absolute text-4xl animate-bounce z-20"
-          style={{ left: `${eventBallX}%`, top: `${eventBallY - 10}%`, transform: 'translate(-50%, -50%)' }}
-        >
-          ⚽
-        </div>
+        <div className="absolute text-3xl animate-bounce z-20" style={{ left: `${ballX}%`, top: `${ballY - 8}%`, transform: 'translate(-50%, -50%)' }}>⚽</div>
       )}
     </div>
   );
@@ -2116,71 +2061,98 @@ function MatchPage() {
   const { token } = useApp();
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
-  const [connection, setConnection] = useState<HubConnection | null>(null);
   const [simulating, setSimulating] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [simResult, setSimResult] = useState<{ home: number; away: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const nav = useNavigate();
 
+  // Load match data
   useEffect(() => {
     if (!id || !token) return;
-
-    const load = async () => {
+    
+    const loadMatch = async () => {
       const data = await api.get<Match>(`/match/${id}`, token);
-      if (data) setMatch(data);
+      if (data) {
+        setMatch(data);
+        setError(null);
+      } else {
+        setError('Match not found. It may not have been created yet.');
+      }
       setLoading(false);
     };
-    load();
+    
+    loadMatch();
 
-    // SignalR connection with proper error handling
-    const connectSignalR = async () => {
-      try {
-        const hub = new HubConnectionBuilder()
-          .withUrl(`${API.replace('/api', '')}/hubs/match`, {
-            accessTokenFactory: () => token
-          })
-          .withAutomaticReconnect()
-          .configureLogging(LogLevel.Warning)
-          .build();
-
-        hub.on('TickUpdate', (m: Match) => setMatch(m));
-        hub.on('MatchState', (m: Match) => setMatch(m));
-
-        await hub.start();
-        await hub.invoke('JoinMatch', id);
-        setConnection(hub);
-      } catch (err) {
-        console.warn('SignalR connection failed, using polling mode');
-        // Fallback to polling if SignalR fails
-        const pollInterval = setInterval(async () => {
-          const data = await api.get<Match>(`/match/${id}`, token);
-          if (data) setMatch(data);
-          if (data?.status === 'Finished') clearInterval(pollInterval);
-        }, 2000);
-        return () => clearInterval(pollInterval);
+    // Poll for updates if match is in progress
+    const interval = setInterval(async () => {
+      if (simulating) return;
+      const data = await api.get<Match>(`/match/${id}`, token);
+      if (data) {
+        setMatch(data);
+        if (data.status === 'Finished') clearInterval(interval);
       }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [id, token, simulating]);
+
+  // Prevent accidental navigation away from unfinished match
+  useEffect(() => {
+    if (!match || match.status === 'Finished') return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'Match is still in progress. Are you sure you want to leave?';
+      return e.returnValue;
     };
 
-    connectSignalR();
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [match]);
 
-    return () => {
-      connection?.stop();
-    };
-  }, [id, token]);
-
-  // Auto-simulate if leaving unfinished match
-  const handleBackToLeague = async () => {
-    if (match && match.status !== 'Finished' && match.fixtureId) {
-      setSimulating(true);
-      await api.post(`/game/fixture/${match.fixtureId}/simulate`, {}, token);
+  const handleSimulateAndLeave = async () => {
+    if (!match?.fixtureId) {
+      nav(-1);
+      return;
     }
+    
+    setSimulating(true);
+    const result = await api.post<{ homeScore: number; awayScore: number; fixtureId: string }>(`/game/fixture/${match.fixtureId}/simulate`, {}, token);
+    
+    if (result.ok && result.data) {
+      setSimResult({ home: result.data.homeScore, away: result.data.awayScore });
+      // Reload to show final state
+      const data = await api.get<Match>(`/match/${id}`, token);
+      if (data) setMatch(data);
+    }
+    setSimulating(false);
+  };
+
+  const handleTryLeave = () => {
+    if (match && match.status !== 'Finished') {
+      setShowLeaveModal(true);
+    } else {
+      nav(-1);
+    }
+  };
+
+  const handleConfirmLeave = async () => {
+    await handleSimulateAndLeave();
+  };
+
+  const handleDismissAndGo = () => {
+    setShowLeaveModal(false);
+    setSimResult(null);
     nav(-1);
   };
 
-  const handleSimulateMatch = async () => {
+  const handleSimulateRest = async () => {
     if (!match?.fixtureId) return;
     setSimulating(true);
-    const result = await api.post<MatchSimResult>(`/game/fixture/${match.fixtureId}/simulate`, {}, token);
-    if (result.ok) {
-      // Reload match data
+    const result = await api.post<{ homeScore: number; awayScore: number }>(`/game/fixture/${match.fixtureId}/simulate`, {}, token);
+    if (result.ok && result.data) {
+      setSimResult({ home: result.data.homeScore, away: result.data.awayScore });
       const data = await api.get<Match>(`/match/${id}`, token);
       if (data) setMatch(data);
     }
@@ -2188,6 +2160,18 @@ function MatchPage() {
   };
 
   if (loading) return <Layout><div className="text-center py-20 text-zinc-400">Loading match...</div></Layout>;
+  
+  if (error) {
+    return (
+      <Layout>
+        <div className="text-center py-20">
+          <p className="text-red-400 mb-4">{error}</p>
+          <Button onClick={() => nav(-1)}>← Go Back</Button>
+        </div>
+      </Layout>
+    );
+  }
+  
   if (!match) return <Layout><div className="text-center py-20 text-zinc-400">Match not found</div></Layout>;
 
   const minute = Math.floor(match.currentTick / 60);
@@ -2195,13 +2179,13 @@ function MatchPage() {
   return (
     <Layout>
       <div className="space-y-6">
-        {/* Back button and controls */}
+        {/* Header with back button */}
         <div className="flex items-center justify-between">
-          <button onClick={handleBackToLeague} className="text-zinc-400 hover:text-white cursor-pointer flex items-center gap-2">
+          <button onClick={handleTryLeave} className="text-zinc-400 hover:text-white cursor-pointer flex items-center gap-2">
             ← Back to League
           </button>
           {match.status !== 'Finished' && (
-            <Button onClick={handleSimulateMatch} disabled={simulating}>
+            <Button onClick={handleSimulateRest} disabled={simulating}>
               {simulating ? '⏳ Simulating...' : '⏩ Simulate Rest'}
             </Button>
           )}
@@ -2217,7 +2201,7 @@ function MatchPage() {
             <div className="px-8 text-center">
               <p className="text-5xl font-bold">{match.homeScore} - {match.awayScore}</p>
               <p className="text-zinc-400 mt-2">{minute}' • {match.status}</p>
-              <p className="text-xs text-zinc-500 mt-1">{match.weather} • {match.attendance.toLocaleString()} fans</p>
+              <p className="text-xs text-zinc-500 mt-1">{match.weather} • {match.attendance?.toLocaleString() || 0} fans</p>
             </div>
             <div className="text-center flex-1">
               <p className="text-2xl font-bold">{match.awayTeam.teamName}</p>
@@ -2225,7 +2209,6 @@ function MatchPage() {
             </div>
           </div>
 
-          {/* Enhanced Pitch with Player Icons */}
           <Pitch2D match={match} />
         </Card>
 
@@ -2233,29 +2216,62 @@ function MatchPage() {
         <Card>
           <h2 className="text-xl font-semibold mb-4">Match Events</h2>
           <div className="space-y-2 max-h-80 overflow-y-auto">
-            {match.events.filter((e) => e.isKeyEvent).slice().reverse().map((e) => (
-              <div key={e.id} className={`p-3 rounded-lg flex items-center gap-3 ${e.type === 'Goal' ? 'bg-emerald-500/20 border-l-4 border-emerald-500' :
+            {match.events?.filter(e => e.isKeyEvent).slice().reverse().map(e => (
+              <div key={e.id} className={`p-3 rounded-lg flex items-center gap-3 ${
+                e.type === 'Goal' ? 'bg-emerald-500/20 border-l-4 border-emerald-500' :
                 e.type === 'YellowCard' ? 'bg-yellow-500/20 border-l-4 border-yellow-500' :
-                  e.type === 'RedCard' ? 'bg-red-500/20 border-l-4 border-red-500' :
-                    e.isImportantEvent ? 'bg-cyan-500/20' : 'bg-zinc-800/50'
-                }`}>
+                e.type === 'RedCard' ? 'bg-red-500/20 border-l-4 border-red-500' :
+                'bg-zinc-800/50'
+              }`}>
                 <span className="text-zinc-400 w-12 text-right">{e.minute}'</span>
                 <span className={`w-8 text-center ${e.isHomeTeam ? 'text-cyan-400' : 'text-orange-400'}`}>
                   {e.isHomeTeam ? 'H' : 'A'}
                 </span>
                 <span className={e.type === 'Goal' ? 'text-emerald-400 font-bold' : ''}>
-                  {e.type === 'Goal' ? '⚽ GOAL!' : e.type === 'YellowCard' ? '🟨' : e.type === 'RedCard' ? '🟥' : ''}
-                  {' '}{e.description || e.type}
+                  {e.type === 'Goal' ? '⚽' : e.type === 'YellowCard' ? '🟨' : e.type === 'RedCard' ? '🟥' : ''} {e.description || e.type}
                 </span>
                 {e.primaryPlayerName && <span className="text-zinc-500">({e.primaryPlayerName})</span>}
               </div>
             ))}
-            {match.events.filter((e) => e.isKeyEvent).length === 0 && (
+            {(!match.events || match.events.filter(e => e.isKeyEvent).length === 0) && (
               <p className="text-zinc-500 text-center py-4">No key events yet</p>
             )}
           </div>
         </Card>
       </div>
+
+      {/* Leave Confirmation Modal */}
+      {showLeaveModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-md w-full">
+            <h2 className="text-xl font-bold mb-4 text-center">⚠️ Match In Progress</h2>
+            <p className="text-zinc-400 text-center mb-6">
+              The match isn't finished yet. If you leave, it will be simulated automatically.
+            </p>
+            
+            {simResult ? (
+              <div className="text-center py-6 mb-4 bg-zinc-800 rounded-lg">
+                <p className="text-sm text-zinc-400 mb-2">Final Result</p>
+                <p className="text-4xl font-bold">
+                  {match.homeTeam.teamName} <span className="text-emerald-400">{simResult.home}</span> - <span className="text-orange-400">{simResult.away}</span> {match.awayTeam.teamName}
+                </p>
+                <Button onClick={handleDismissAndGo} className="mt-4">
+                  ✓ Continue
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-3">
+                <Button variant="secondary" onClick={() => setShowLeaveModal(false)} className="flex-1">
+                  Stay
+                </Button>
+                <Button onClick={handleConfirmLeave} disabled={simulating} className="flex-1">
+                  {simulating ? '⏳ Simulating...' : 'Simulate & Leave'}
+                </Button>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
     </Layout>
   );
 }

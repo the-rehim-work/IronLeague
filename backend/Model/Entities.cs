@@ -391,7 +391,7 @@ public class Match
     public long RngSeed { get; set; }
     public WeatherType Weather { get; set; }
     public int Attendance { get; set; }
-    public int HomeHomeSpeechesUsed { get; set; }
+    public int HomeSpeechesUsed { get; set; }
     public int AwaySpeechesUsed { get; set; }
     public int HomePausesUsed { get; set; }
     public int AwayPausesUsed { get; set; }
@@ -409,7 +409,8 @@ public class Match
 
 public enum MatchStatus
 {
-    NotStarted, FirstHalf, HalfTime, SecondHalf, ExtraTimeFirst, ExtraTimeSecond, Penalties, Finished, Abandoned
+    NotStarted, FirstHalf, HalfTime, SecondHalf, ExtraTimeFirst, ExtraTimeSecond, Penalties, Finished, Abandoned,
+    InProgress
 }
 
 public enum WeatherType
@@ -776,4 +777,33 @@ public class SaveExport
     public DateTime ExportedAt { get; set; } = DateTime.UtcNow;
     public string Version { get; set; } = "1.0";
     public string DataHash { get; set; } = string.Empty;
+}
+
+public class DirectThread
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public ICollection<DirectThreadMember> Members { get; set; } = new List<DirectThreadMember>();
+    public ICollection<DirectMessage> Messages { get; set; } = new List<DirectMessage>();
+}
+
+public class DirectThreadMember
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid ThreadId { get; set; }
+    public DirectThread Thread { get; set; } = null!;
+    public Guid UserId { get; set; }
+    public AppUser User { get; set; } = null!;
+}
+
+public class DirectMessage
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid ThreadId { get; set; }
+    public DirectThread Thread { get; set; } = null!;
+    public Guid SenderId { get; set; }
+    public AppUser Sender { get; set; } = null!;
+    public string Content { get; set; } = string.Empty;
+    public DateTime SentAt { get; set; } = DateTime.UtcNow;
+    public DateTime? ReadAt { get; set; }
 }

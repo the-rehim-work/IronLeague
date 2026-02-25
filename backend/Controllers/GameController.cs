@@ -135,7 +135,12 @@ public class MatchController : ControllerBase
 public class TransferController : ControllerBase
 {
     private readonly ITransferService _transferService;
-    public TransferController(ITransferService transferService) => _transferService = transferService;
+    private readonly AppDbContext _db;
+    public TransferController(ITransferService transferService, AppDbContext db)
+    {
+        _transferService = transferService;
+        _db = db;
+    }
 
     [HttpGet("freeagents")]
     public async Task<ActionResult<List<PlayerDto>>> GetFreeAgents() => Ok(await _transferService.GetFreeAgentsAsync());
@@ -144,7 +149,10 @@ public class TransferController : ControllerBase
     public async Task<ActionResult<TransferDto>> CreateOffer(CreateTransferOfferDto dto)
     {
         var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-        return Ok();
+        var manager = await _db.Managers.FirstOrDefaultAsync(m => m.UserId == userId && m.CurrentTeamId != null);
+        if (manager == null) return BadRequest("No manager with a team found");
+        var result = await _transferService.CreateOfferAsync(manager.Id, dto);
+        return result == null ? BadRequest("Failed to create offer") : Ok(result);
     }
 }
 
@@ -611,7 +619,6 @@ public class GameController : ControllerBase
         var result = await _simulationService.SimulateMatchAsync(fixtureId);
         if (result.FixtureId == Guid.Empty)
             return NotFound(new { message = "Fixture not found" });
-
         return Ok(result);
     }
 

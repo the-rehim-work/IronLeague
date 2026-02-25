@@ -107,8 +107,9 @@ builder.Services
 
                 if (!string.IsNullOrEmpty(accessToken) &&
                     (path.StartsWithSegments("/hubs/match")
-                     || path.StartsWithSegments("/hubs/league")
-                     || path.StartsWithSegments("/hubs/notifications")))
+                        || path.StartsWithSegments("/hubs/league")
+                        || path.StartsWithSegments("/hubs/notifications")
+                        || path.StartsWithSegments("/hubs/chat")))
                 {
                     context.Token = accessToken;
                 }
@@ -192,6 +193,7 @@ app.UseAuthorization();
 app.MapHub<MatchHub>("/hubs/match");
 app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapHub<LeagueHub>("/hubs/league");
+app.MapHub<ChatHub>("/hubs/chat");
 app.MapControllers();
 
 app.Run();

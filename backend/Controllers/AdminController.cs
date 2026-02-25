@@ -13,7 +13,7 @@ public class AdminController : ControllerBase
     private readonly IAdminService _adminService;
     public AdminController(IAdminService adminService) => _adminService = adminService;
 
-    private bool IsAdmin() => User.FindFirst("IsAdmin")?.Value == "True";
+    private bool IsAdmin() => User.IsInRole("Admin");
 
     [HttpPost("seed")]
     public async Task<ActionResult> Seed()

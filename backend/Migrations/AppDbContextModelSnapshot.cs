@@ -287,6 +287,72 @@ namespace backend.Migrations
                     b.ToTable("Countries");
                 });
 
+            modelBuilder.Entity("IronLeague.Entities.DirectMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("SenderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("ThreadId", "SentAt");
+
+                    b.ToTable("DirectMessages");
+                });
+
+            modelBuilder.Entity("IronLeague.Entities.DirectThread", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DirectThreads");
+                });
+
+            modelBuilder.Entity("IronLeague.Entities.DirectThreadMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ThreadId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("DirectThreadMembers");
+                });
+
             modelBuilder.Entity("IronLeague.Entities.Fixture", b =>
                 {
                     b.Property<Guid>("Id")
@@ -941,13 +1007,13 @@ namespace backend.Migrations
                     b.Property<string>("HomeFormation")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("HomeHomeSpeechesUsed")
-                        .HasColumnType("int");
-
                     b.Property<int>("HomePausesUsed")
                         .HasColumnType("int");
 
                     b.Property<int>("HomeScore")
+                        .HasColumnType("int");
+
+                    b.Property<int>("HomeSpeechesUsed")
                         .HasColumnType("int");
 
                     b.Property<string>("HomeTactics")
@@ -2029,6 +2095,44 @@ namespace backend.Migrations
                     b.Navigation("Team");
                 });
 
+            modelBuilder.Entity("IronLeague.Entities.DirectMessage", b =>
+                {
+                    b.HasOne("IronLeague.Entities.AppUser", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("IronLeague.Entities.DirectThread", "Thread")
+                        .WithMany("Messages")
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Sender");
+
+                    b.Navigation("Thread");
+                });
+
+            modelBuilder.Entity("IronLeague.Entities.DirectThreadMember", b =>
+                {
+                    b.HasOne("IronLeague.Entities.DirectThread", "Thread")
+                        .WithMany("Members")
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("IronLeague.Entities.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Thread");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("IronLeague.Entities.Fixture", b =>
                 {
                     b.HasOne("IronLeague.Entities.LeagueTeamInstance", "AwayTeam")
@@ -2651,6 +2755,13 @@ namespace backend.Migrations
             modelBuilder.Entity("IronLeague.Entities.Country", b =>
                 {
                     b.Navigation("Leagues");
+                });
+
+            modelBuilder.Entity("IronLeague.Entities.DirectThread", b =>
+                {
+                    b.Navigation("Members");
+
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("IronLeague.Entities.Fixture", b =>

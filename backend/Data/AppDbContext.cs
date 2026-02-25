@@ -49,6 +49,9 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
     public DbSet<InternationalCall> InternationalCalls => Set<InternationalCall>();
     public DbSet<InternationalBreak> InternationalBreaks => Set<InternationalBreak>();
     public DbSet<SaveExport> SaveExports => Set<SaveExport>();
+    public DbSet<DirectThread> DirectThreads => Set<DirectThread>();
+    public DbSet<DirectThreadMember> DirectThreadMembers => Set<DirectThreadMember>();
+    public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -56,6 +59,8 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
 
         builder.Entity<LeagueInvite>()
             .Property(i => i.Status).HasConversion<string>();
+        builder.Entity<Country>().HasKey(c => c.Code);
+        builder.Entity<Country>().Property(c => c.Code).HasMaxLength(3);
 
         builder.Entity<LeagueInvite>()
             .HasOne(i => i.LeagueInstance)
@@ -80,9 +85,6 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             .WithMany()
             .HasForeignKey(li => li.OwnerId)
             .OnDelete(DeleteBehavior.NoAction);
-
-        builder.Entity<Country>().HasKey(c => c.Code);
-        builder.Entity<Country>().Property(c => c.Code).HasMaxLength(3);
 
         builder.Entity<League>()
             .HasOne(l => l.Country)
@@ -235,19 +237,45 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             .Property(g => g.ManagerReputationCurve).HasConversion<string>();
         builder.Entity<GovernanceSettings>()
             .Property(g => g.ScandalCurve).HasConversion<string>();
-
         builder.Entity<MatchEvent>()
             .Property(e => e.Type).HasConversion<string>();
-
         builder.Entity<Match>()
             .Property(m => m.Status).HasConversion<string>();
         builder.Entity<Match>()
             .Property(m => m.Weather).HasConversion<string>();
-
         builder.Entity<Competition>()
             .Property(c => c.Type).HasConversion<string>();
         builder.Entity<Competition>()
             .Property(c => c.Status).HasConversion<string>();
+        builder.Entity<Fixture>()
+            .Property(f => f.Status).HasConversion<string>();
+        builder.Entity<LeagueInstance>()
+            .Property(li => li.Status).HasConversion<string>();
+        builder.Entity<Transfer>()
+            .Property(t => t.Type).HasConversion<string>();
+        builder.Entity<Transfer>()
+            .Property(t => t.Status).HasConversion<string>();
+        builder.Entity<TransferOffer>()
+            .Property(o => o.Status).HasConversion<string>();
+        builder.Entity<TrainingSession>()
+            .Property(t => t.Type).HasConversion<string>();
+        builder.Entity<Friendship>()
+            .Property(f => f.Status).HasConversion<string>();
+        builder.Entity<Notification>()
+            .Property(n => n.Type).HasConversion<string>();
+        builder.Entity<PressEvent>()
+            .Property(p => p.Type).HasConversion<string>();
+
+        builder.Entity<Speech>()
+            .Property(s => s.Type).HasConversion<string>();
+        builder.Entity<Speech>()
+            .Property(s => s.Target).HasConversion<string>();
+        builder.Entity<Speech>()
+            .Property(s => s.Tone).HasConversion<string>();
+        builder.Entity<InGameInstruction>()
+            .Property(i => i.Category).HasConversion<string>();
+        builder.Entity<InternationalBreak>()
+            .Property(ib => ib.Type).HasConversion<string>();
 
         builder.Entity<Competition>()
             .HasOne(c => c.LeagueInstance)
@@ -267,44 +295,29 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             .HasForeignKey(ct => ct.TeamInstanceId)
             .OnDelete(DeleteBehavior.NoAction);
 
-        builder.Entity<Fixture>()
-            .Property(f => f.Status).HasConversion<string>();
+        builder.Entity<DirectThreadMember>()
+            .HasOne(m => m.Thread)
+            .WithMany(t => t.Members)
+            .HasForeignKey(m => m.ThreadId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        builder.Entity<LeagueInstance>()
-            .Property(li => li.Status).HasConversion<string>();
+        builder.Entity<DirectThreadMember>()
+            .HasOne(m => m.User)
+            .WithMany()
+            .HasForeignKey(m => m.UserId)
+            .OnDelete(DeleteBehavior.NoAction);
 
-        builder.Entity<Transfer>()
-            .Property(t => t.Type).HasConversion<string>();
-        builder.Entity<Transfer>()
-            .Property(t => t.Status).HasConversion<string>();
+        builder.Entity<DirectMessage>()
+            .HasOne(m => m.Thread)
+            .WithMany(t => t.Messages)
+            .HasForeignKey(m => m.ThreadId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        builder.Entity<TransferOffer>()
-            .Property(o => o.Status).HasConversion<string>();
-
-        builder.Entity<TrainingSession>()
-            .Property(t => t.Type).HasConversion<string>();
-
-        builder.Entity<Friendship>()
-            .Property(f => f.Status).HasConversion<string>();
-
-        builder.Entity<Notification>()
-            .Property(n => n.Type).HasConversion<string>();
-
-        builder.Entity<PressEvent>()
-            .Property(p => p.Type).HasConversion<string>();
-
-        builder.Entity<Speech>()
-            .Property(s => s.Type).HasConversion<string>();
-        builder.Entity<Speech>()
-            .Property(s => s.Target).HasConversion<string>();
-        builder.Entity<Speech>()
-            .Property(s => s.Tone).HasConversion<string>();
-
-        builder.Entity<InGameInstruction>()
-            .Property(i => i.Category).HasConversion<string>();
-
-        builder.Entity<InternationalBreak>()
-            .Property(ib => ib.Type).HasConversion<string>();
+        builder.Entity<DirectMessage>()
+            .HasOne(m => m.Sender)
+            .WithMany()
+            .HasForeignKey(m => m.SenderId)
+            .OnDelete(DeleteBehavior.NoAction);
 
         builder.Entity<Player>().Property(p => p.MarketValue).HasPrecision(18, 2);
         builder.Entity<Contract>().Property(c => c.WeeklyWage).HasPrecision(18, 2);
@@ -339,5 +352,6 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
         builder.Entity<MatchState>().HasIndex(s => new { s.MatchId, s.Tick });
         builder.Entity<Notification>().HasIndex(n => new { n.UserId, n.IsRead });
         builder.Entity<Transfer>().HasIndex(t => t.Status);
+        builder.Entity<DirectMessage>().HasIndex(m => new { m.ThreadId, m.SentAt });
     }
 }

@@ -22,6 +22,7 @@ public record SimulationResult(
 
 public record MatchSimResult(
     Guid FixtureId,
+    Guid? MatchId,
     string HomeTeamName,
     string AwayTeamName,
     int HomeScore,
@@ -33,12 +34,23 @@ public class SimulationService : ISimulationService
 {
     private readonly AppDbContext _db;
     private readonly ICompetitionService _competitionService;
+    private readonly ITrainingService _trainingService;
+    private readonly IPressService _pressService;
+    private readonly IInternationalService _internationalService;
     private readonly Random _rng = new();
 
-    public SimulationService(AppDbContext db, ICompetitionService competitionService)
+    public SimulationService(
+        AppDbContext db,
+        ICompetitionService competitionService,
+        ITrainingService trainingService,
+        IPressService pressService,
+        IInternationalService internationalService)
     {
         _db = db;
         _competitionService = competitionService;
+        _trainingService = trainingService;
+        _pressService = pressService;
+        _internationalService = internationalService;
     }
 
     public async Task<SimulationResult> AdvanceDayAsync(Guid leagueInstanceId, Guid? userId, bool simulatePlayerMatches = false)
@@ -94,6 +106,7 @@ public class SimulationService : ISimulationService
             var result = await SimulateMatchInternalAsync(fixture, instance.Governance);
             simulatedMatches.Add(new MatchSimResult(
                 fixture.Id,
+                fixture.MatchId,
                 fixture.HomeTeam.BaseTeam.Name,
                 fixture.AwayTeam.BaseTeam.Name,
                 result.HomeScore,
@@ -102,6 +115,8 @@ public class SimulationService : ISimulationService
             ));
         }
 
+        await RunDailyProcessingAsync(instance, userTeamInstanceId, todaysFixtures);
+
         if (playerMatchUpcoming == null)
         {
             instance.CurrentDate = nextDate;
@@ -109,15 +124,63 @@ public class SimulationService : ISimulationService
 
         await _db.SaveChangesAsync();
 
+        var message = playerMatchUpcoming != null
+            ? "Your match is ready to play!"
+            : simulatedMatches.Count == 0
+                ? "Day advanced. No matches today."
+                : null;
+
         return new SimulationResult(
             true,
             instance.CurrentDate,
             simulatedMatches,
             playerMatchUpcoming,
-            playerMatchUpcoming != null ? "Your match is scheduled for today!" : null
+            message
         );
     }
 
+    private async Task RunDailyProcessingAsync(LeagueInstance instance, Guid? userTeamInstanceId, List<Fixture> todaysFixtures)
+    {
+        var playedTeamIds = todaysFixtures
+            .Where(f => f.Status == FixtureStatus.Completed || f.Status == FixtureStatus.InProgress)
+            .SelectMany(f => new[] { f.HomeTeamId, f.AwayTeamId })
+            .ToHashSet();
+
+        var aiTeams = instance.Teams
+            .Where(t => !t.IsControlledByPlayer && !playedTeamIds.Contains(t.Id))
+            .ToList();
+
+        foreach (var team in aiTeams)
+        {
+            try
+            {
+                await _trainingService.CreateSessionAsync(team.Id, new CreateTrainingSessionDto("General", 50, null, null));
+            }
+            catch { }
+        }
+
+        if (_rng.NextDouble() < 0.05)
+        {
+            try
+            {
+                await _pressService.GenerateScandalAsync(instance.Id, null, null);
+            }
+            catch { }
+        }
+
+        var activeBreak = await _db.InternationalBreaks
+            .FirstOrDefaultAsync(b => b.StartDate.Date == instance.CurrentDate.Date);
+
+        if (activeBreak != null)
+        {
+            try
+            {
+                await _internationalService.ProcessBreakReturnAsync(activeBreak.Id);
+            }
+            catch { }
+        }
+    }
+    
     public async Task<SimulationResult> AdvanceUntilPlayerMatchAsync(Guid leagueInstanceId, Guid userId, bool simulatePlayerMatches = false)
     {
         var allSimulated = new List<MatchSimResult>();
@@ -161,16 +224,30 @@ public class SimulationService : ISimulationService
             .Include(f => f.Competition).ThenInclude(c => c.LeagueInstance).ThenInclude(l => l.Governance)
             .Include(f => f.HomeTeam).ThenInclude(t => t.BaseTeam).ThenInclude(t => t.Players)
             .Include(f => f.AwayTeam).ThenInclude(t => t.BaseTeam).ThenInclude(t => t.Players)
+            .Include(f => f.Match)
             .FirstOrDefaultAsync(f => f.Id == fixtureId);
 
         if (fixture == null)
-            return new MatchSimResult(Guid.Empty, "", "", 0, 0, false);
+            return new MatchSimResult(Guid.Empty, Guid.Empty, "", "", 0, 0, false);
+
+        if (fixture.Status == FixtureStatus.Completed && fixture.Match != null)
+        {
+            return new MatchSimResult(
+                fixture.Id,
+                fixture.Match.Id,
+                fixture.HomeTeam.BaseTeam.Name,
+                fixture.AwayTeam.BaseTeam.Name,
+                fixture.Match.HomeScore,
+                fixture.Match.AwayScore,
+                false
+            );
+        }
 
         var governance = fixture.Competition.LeagueInstance.Governance ?? new GovernanceSettings();
         var result = await SimulateMatchInternalAsync(fixture, governance);
         await _db.SaveChangesAsync();
 
-        return new MatchSimResult(fixture.Id, fixture.HomeTeam.BaseTeam.Name, fixture.AwayTeam.BaseTeam.Name, result.HomeScore, result.AwayScore, false);
+        return new MatchSimResult(fixture.Id, fixture.MatchId, fixture.HomeTeam.BaseTeam.Name, fixture.AwayTeam.BaseTeam.Name, result.HomeScore, result.AwayScore, false);
     }
 
     private async Task<(int HomeScore, int AwayScore)> SimulateMatchInternalAsync(Fixture fixture, GovernanceSettings? governance)
@@ -238,11 +315,40 @@ public class SimulationService : ISimulationService
 
         _db.Matches.Add(match);
         fixture.MatchId = match.Id;
+        fixture.Match = match;
         fixture.Status = FixtureStatus.Completed;
 
-        await _competitionService.UpdateStandingsAfterMatchAsync(fixture.Id, homeScore, awayScore);
+        UpdateStandings(fixture.HomeTeam, fixture.AwayTeam, homeScore, awayScore);
 
         return (homeScore, awayScore);
+    }
+
+    private void UpdateStandings(LeagueTeamInstance home, LeagueTeamInstance away, int homeScore, int awayScore)
+    {
+        home.GoalsFor += homeScore;
+        home.GoalsAgainst += awayScore;
+        away.GoalsFor += awayScore;
+        away.GoalsAgainst += homeScore;
+
+        if (homeScore > awayScore)
+        {
+            home.Wins++;
+            home.Points += 3;
+            away.Losses++;
+        }
+        else if (homeScore < awayScore)
+        {
+            away.Wins++;
+            away.Points += 3;
+            home.Losses++;
+        }
+        else
+        {
+            home.Draws++;
+            away.Draws++;
+            home.Points++;
+            away.Points++;
+        }
     }
 
     private float CalculateTeamBaseStrength(List<Player> players)
@@ -262,7 +368,7 @@ public class SimulationService : ISimulationService
     {
         if (players.Count == 0) return 1.0f;
 
-        var top11 = players.OrderByDescending(p => 
+        var top11 = players.OrderByDescending(p =>
             (p.Pace + p.Shooting + p.Passing + p.Dribbling + p.Defending + p.Physical) / 6f)
             .Take(11).ToList();
 

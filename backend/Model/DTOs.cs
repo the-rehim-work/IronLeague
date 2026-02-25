@@ -5,7 +5,7 @@ public sealed record LoginDto(string UserOrEmail, string Password);
 public sealed record UpdateProfileDto(string? DisplayName, string? Email);
 public sealed record ChangePasswordDto(string CurrentPassword, string NewPassword);
 
-public record ManagerDto(Guid Id, string Name, string Nationality, int Age, int Physical, int Mental, int Technical, int Reputation, decimal PersonalBalance, bool IsRetired, Guid? CurrentTeamId, string? CurrentTeamName, List<ManagerLanguageDto> Languages);
+public record ManagerDto(Guid Id, string Name, string Nationality, int Age, int Physical, int Mental, int Technical, int Reputation, decimal PersonalBalance, bool IsRetired, Guid? CurrentTeamId, string? CurrentTeamName, Guid? LeagueInstanceId, List<ManagerLanguageDto> Languages);
 public record CreateManagerDto(string Name, string Nationality, bool EarlyBonus);
 public record ManagerLanguageDto(string LanguageCode, int Proficiency);
 public record ManagerTrophyDto(string TrophyName, string CompetitionName, int Season, DateTime WonAt);

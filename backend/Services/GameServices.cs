@@ -44,7 +44,7 @@ public class ManagerService : IManagerService
         return managers.Select(MapManager).ToList();
     }
 
-    private static ManagerDto MapManager(Manager m) => new(m.Id, m.Name, m.Nationality, m.Age, m.Physical, m.Mental, m.Technical, m.Reputation, m.PersonalBalance, m.IsRetired, m.CurrentTeamId, m.CurrentTeam?.Name, m.Languages.Select(l => new ManagerLanguageDto(l.LanguageCode, l.Proficiency)).ToList());
+    private static ManagerDto MapManager(Manager m) => new(m.Id, m.Name, m.Nationality, m.Age, m.Physical, m.Mental, m.Technical, m.Reputation, m.PersonalBalance, m.IsRetired, m.CurrentTeamId, m.CurrentTeam?.Name, m.LeagueInstanceId, m.Languages.Select(l => new ManagerLanguageDto(l.LanguageCode, l.Proficiency)).ToList());
 }
 
 public interface ILeagueInstanceService
@@ -197,10 +197,56 @@ public class MatchService : IMatchService
 
     public async Task<MatchDto?> StartMatchAsync(StartMatchDto dto)
     {
-        var match = await _engine.CreateMatchAsync(dto.FixtureId);
-        match.HomeFormation = dto.HomeFormation; match.HomeTactics = dto.HomeTactics; match.AwayFormation = dto.AwayFormation; match.AwayTactics = dto.AwayTactics; match.Status = MatchStatus.FirstHalf;
+        var fixture = await _db.Fixtures
+            .Include(f => f.HomeTeam).ThenInclude(t => t.BaseTeam)
+            .Include(f => f.AwayTeam).ThenInclude(t => t.BaseTeam)
+            .FirstOrDefaultAsync(f => f.Id == dto.FixtureId);
+
+        if (fixture == null) return null;
+
+        if (fixture.MatchId.HasValue)
+        {
+            var existingMatch = await _db.Matches.FindAsync(fixture.MatchId);
+            if (existingMatch != null)
+                return MapToDto(existingMatch, fixture);
+        }
+
+        var match = new Match
+        {
+            Id = Guid.NewGuid(),
+            FixtureId = fixture.Id,
+            HomeScore = 0,
+            AwayScore = 0,
+            Status = MatchStatus.InProgress,
+            CurrentTick = 0,
+            TotalTicks = 5400,
+            Weather = (WeatherType)new Random().Next(0, 8),
+            Attendance = (int)(fixture.HomeTeam.BaseTeam.StadiumCapacity * (0.7 + new Random().NextDouble() * 0.3)),
+            HomeFormation = dto.HomeFormation ?? "4-4-2",
+            AwayFormation = dto.AwayFormation ?? "4-4-2"
+        };
+
+        _db.Matches.Add(match);
+        fixture.MatchId = match.Id;
+        fixture.Match = match;
+        fixture.Status = FixtureStatus.InProgress;
+
         await _db.SaveChangesAsync();
-        return await GetMatchAsync(match.Id);
+
+        return MapToDto(match, fixture);
+    }
+
+    private MatchDto? MapToDto(Match match, Fixture fixture)
+    {
+        if (match == null)
+            return null;
+
+        var matchDto = new MatchDto(match.Id, fixture.Id, match.HomeScore, match.AwayScore, match.CurrentTick, match.TotalTicks, match.Status.ToString(),
+            match.Weather.ToString(), match.Attendance,
+            new MatchTeamDto(fixture.HomeTeam.Id, fixture.HomeTeam.BaseTeam.Name, match.HomeFormation ?? "4-4-2", match.HomeTactics ?? "", match.HomeSpeechesUsed, match.HomePausesUsed, new List<MatchPlayerDto>()),
+            new MatchTeamDto(fixture.AwayTeam.Id, fixture.AwayTeam.BaseTeam.Name, match.AwayFormation ?? "4-4-2", match.AwayTactics ?? "", match.AwaySpeechesUsed, match.AwayPausesUsed, new List<MatchPlayerDto>())
+            , [.. (IEnumerable<MatchEventDto>)match.Events]);
+        return matchDto;
     }
 
     public async Task<bool> PauseMatchAsync(Guid matchId, Guid managerId)
@@ -235,12 +281,12 @@ public class MatchService : IMatchService
         var manager = await _db.Managers.FindAsync(managerId);
         if (manager == null) return null;
         var isHome = match.Fixture.HomeTeam.ManagerId == managerId;
-        var speechesUsed = isHome ? match.HomeHomeSpeechesUsed : match.AwaySpeechesUsed;
+        var speechesUsed = isHome ? match.HomeSpeechesUsed : match.AwaySpeechesUsed;
         if (speechesUsed >= 3) return null;
 
         var speech = new Speech { Id = Guid.NewGuid(), MatchId = match.Id, ManagerId = managerId, Manager = manager, Tick = match.CurrentTick, Type = Enum.Parse<SpeechType>(dto.Type), Target = Enum.Parse<SpeechTarget>(dto.Target), TargetPlayerId = dto.TargetPlayerId, Tone = Enum.Parse<SpeechTone>(dto.Tone) };
         await _engine.ApplySpeechAsync(match, speech, match.Fixture.Competition.LeagueInstance.Governance);
-        if (isHome) match.HomeHomeSpeechesUsed++; else match.AwaySpeechesUsed++;
+        if (isHome) match.HomeSpeechesUsed++; else match.AwaySpeechesUsed++;
         await _db.SaveChangesAsync();
         return speech;
     }
@@ -249,7 +295,7 @@ public class MatchService : IMatchService
     {
         var state = m.States.FirstOrDefault();
         return new MatchDto(m.Id, m.FixtureId, m.HomeScore, m.AwayScore, m.CurrentTick, m.TotalTicks, m.Status.ToString(), m.Weather.ToString(), m.Attendance,
-            new MatchTeamDto(m.Fixture.HomeTeamId, m.Fixture.HomeTeam.BaseTeam.Name, m.HomeFormation ?? "4-4-2", m.HomeTactics ?? "", m.HomeHomeSpeechesUsed, m.HomePausesUsed, new List<MatchPlayerDto>()),
+            new MatchTeamDto(m.Fixture.HomeTeamId, m.Fixture.HomeTeam.BaseTeam.Name, m.HomeFormation ?? "4-4-2", m.HomeTactics ?? "", m.HomeSpeechesUsed, m.HomePausesUsed, new List<MatchPlayerDto>()),
             new MatchTeamDto(m.Fixture.AwayTeamId, m.Fixture.AwayTeam.BaseTeam.Name, m.AwayFormation ?? "4-4-2", m.AwayTactics ?? "", m.AwaySpeechesUsed, m.AwayPausesUsed, new List<MatchPlayerDto>()),
             m.Events.Select(e => new MatchEventDto(e.Id, e.Tick, e.Minute, e.Type.ToString(), e.PrimaryPlayer?.LastName, e.SecondaryPlayer?.LastName, e.IsHomeTeam, e.Description, e.IsKeyEvent, e.IsImportantEvent, e.PositionX, e.PositionY)).ToList());
     }
@@ -998,7 +1044,7 @@ public class YouthAcademyService : IYouthAcademyService
     public async Task<List<YouthPlayerDto>> GenerateIntakeAsync(Guid academyId)
     {
         var academy = await _db.Set<YouthAcademy>()
-            .Include(a => a.Team)
+            .Include(a => a.Team).ThenInclude(t => t.League)
             .FirstOrDefaultAsync(a => a.Id == academyId);
 
         if (academy == null) return new List<YouthPlayerDto>();
@@ -1344,7 +1390,7 @@ public interface IPressService
     Task<List<PressEventDto>> GetLeaguePressEventsAsync(Guid leagueInstanceId, int limit = 20);
     Task<PressEventDto?> GenerateMatchReportAsync(Guid matchId);
     Task<PressEventDto?> GenerateScandalAsync(Guid leagueInstanceId, Guid? managerId, Guid? playerId);
-    Task<PressEventDto?> GenerateTransferRumorAsync(Guid playerId, Guid? interestedTeamId);
+    Task<PressEventDto?> GenerateTransferRumorAsync(Guid playerId, Guid? interestedTeamId, Guid leagueInstanceId);
 }
 
 public class PressService : IPressService
@@ -1454,7 +1500,7 @@ public class PressService : IPressService
         );
     }
 
-    public async Task<PressEventDto?> GenerateTransferRumorAsync(Guid playerId, Guid? interestedTeamId)
+    public async Task<PressEventDto?> GenerateTransferRumorAsync(Guid playerId, Guid? interestedTeamId, Guid leagueInstanceId)
     {
         var player = await _db.Players.Include(p => p.Team).FirstOrDefaultAsync(p => p.Id == playerId);
         if (player == null) return null;
@@ -1471,7 +1517,7 @@ public class PressService : IPressService
         var pressEvent = new PressEvent
         {
             Id = Guid.NewGuid(),
-            LeagueInstanceId = player.Team?.LeagueId ?? Guid.Empty,
+            LeagueInstanceId = leagueInstanceId,
             Type = PressEventType.TransferNews,
             Headline = headline,
             Content = $"Reports suggest {playerName} could be on the move...",
