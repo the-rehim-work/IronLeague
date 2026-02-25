@@ -16,7 +16,16 @@ import LeagueDetail from '@/pages/LeagueDetail';
 import TeamDetail from '@/pages/TeamDetail';
 import PlayerDetail from '@/pages/PlayerDetail';
 import MatchPage from '@/pages/Match';
+import PreMatch from '@/pages/PreMatch';
+import Tactics from '@/pages/Tactics';
+import Training from '@/pages/Training';
+import Transfers from '@/pages/Transfers';
+import Press from '@/pages/Press';
+import Profile from '@/pages/Profile';
 import Admin from '@/pages/Admin';
+import Chat from '@/pages/Chat';
+import Friends from '@/pages/Friends';
+import YouthAcademy from '@/pages/YouthAcademy';
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -81,6 +90,15 @@ export default function App() {
         <Route path="/teams/:id" element={<AuthGuard><TeamDetail /></AuthGuard>} />
         <Route path="/players/:id" element={<AuthGuard><PlayerDetail /></AuthGuard>} />
         <Route path="/match/:matchId" element={<AuthGuard><MatchPage /></AuthGuard>} />
+        <Route path="/match/setup/:fixtureId/:leagueId" element={<AuthGuard><PreMatch /></AuthGuard>} />
+        <Route path="/tactics/:teamId" element={<AuthGuard><Tactics /></AuthGuard>} />
+        <Route path="/training/:teamId" element={<AuthGuard><Training /></AuthGuard>} />
+        <Route path="/transfers" element={<AuthGuard><Transfers /></AuthGuard>} />
+        <Route path="/press/:leagueId" element={<AuthGuard><Press /></AuthGuard>} />
+        <Route path="/profile" element={<AuthGuard><Profile /></AuthGuard>} />
+        <Route path="/friends" element={<AuthGuard><Friends /></AuthGuard>} />
+        <Route path="/chat" element={<AuthGuard><Chat /></AuthGuard>} />
+        <Route path="/youth-academy/:teamId" element={<AuthGuard><YouthAcademy /></AuthGuard>} />
         <Route path="/admin" element={<AuthGuard><Admin /></AuthGuard>} />
 
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

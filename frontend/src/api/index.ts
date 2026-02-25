@@ -11,3 +11,4 @@ export { trainingApi } from './training';
 export { transferApi } from './transfer';
 export { pressApi } from './press';
 export { adminApi } from './admin';
+export { socialApi } from './social';

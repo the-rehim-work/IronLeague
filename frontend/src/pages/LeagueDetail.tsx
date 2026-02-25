@@ -8,7 +8,7 @@ import type {
   LeagueInstance, LeagueTeam, LeagueTeamInstance,
   FixtureWeek, GroupedFixture, SimulationResult, Manager, MyTeamResponse,
 } from '@/types';
-import { ArrowLeft, Play, FastForward, Users, Zap, Bot } from 'lucide-react';
+import { ArrowLeft, Play, FastForward, Users, Zap, Bot, Crosshair, Dumbbell, Newspaper } from 'lucide-react';
 import { statusBadge, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -137,13 +137,29 @@ export default function LeagueDetail() {
       navigate(`/match/${match.id}`);
     } catch {
       toast.error('Failed to start match, simulating instead');
+      const fId = pendingMatch.id;
       setPendingMatch(null);
-      await handleAdvance(false, true);
+      try {
+        await matchesApi.simulateFixture(fId);
+        toast.success('Match simulated');
+        await load();
+      } catch {
+        toast.error('Simulation also failed — try advancing the day with Auto-Sim');
+      }
     }
   };
 
   const handleSimOwn = async () => {
+    const fId = pendingMatch?.id;
     setPendingMatch(null);
+    if (fId) {
+      try {
+        await matchesApi.simulateFixture(fId);
+        toast.success('Match simulated');
+        await load();
+        return;
+      } catch {}
+    }
     await handleAdvance(false, true);
   };
 
@@ -241,6 +257,17 @@ export default function LeagueDetail() {
                 <p className="text-white font-bold">{s.v}</p>
               </div>
             ))}
+          </div>
+          <div className="flex gap-2 mt-3 pt-3 border-t border-zinc-800/60">
+            <button onClick={() => navigate(`/tactics/${myTeam.teamInstanceId}`)} className="btn-ghost flex items-center gap-1.5 text-xs flex-1">
+              <Crosshair className="w-3.5 h-3.5" />Tactics
+            </button>
+            <button onClick={() => navigate(`/training/${myTeam.teamInstanceId}`)} className="btn-ghost flex items-center gap-1.5 text-xs flex-1">
+              <Dumbbell className="w-3.5 h-3.5" />Training
+            </button>
+            <button onClick={() => navigate(`/press/${id}`)} className="btn-ghost flex items-center gap-1.5 text-xs flex-1">
+              <Newspaper className="w-3.5 h-3.5" />Press
+            </button>
           </div>
         </div>
       )}

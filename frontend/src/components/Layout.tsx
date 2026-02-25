@@ -2,6 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import {
   LayoutDashboard, User, Trophy, Bell, LogOut, Swords, ChevronRight, Shield,
+  DollarSign, UserCircle, Users, MessageSquare,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { notificationsApi } from '@/api';
@@ -15,6 +16,10 @@ const NAV = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/managers', icon: User, label: 'Managers' },
   { path: '/leagues', icon: Trophy, label: 'Leagues' },
+  { path: '/transfers', icon: DollarSign, label: 'Transfers' },
+  { path: '/friends', icon: Users, label: 'Friends' },
+  { path: '/chat', icon: MessageSquare, label: 'Chat' },
+  { path: '/profile', icon: UserCircle, label: 'Profile' },
 ];
 
 export default function Layout({ children }: LayoutProps) {
