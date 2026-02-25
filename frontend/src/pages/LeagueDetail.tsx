@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import Spinner from '@/components/Spinner';
@@ -8,7 +8,7 @@ import type {
   LeagueInstance, LeagueTeam, LeagueTeamInstance,
   FixtureWeek, GroupedFixture, SimulationResult, Manager, MyTeamResponse,
 } from '@/types';
-import { ArrowLeft, Play, FastForward, Users, Zap, Bot, Crosshair, Dumbbell, Newspaper } from 'lucide-react';
+import { ArrowLeft, Play, FastForward, Users, Zap, Bot, Square, Crosshair, Dumbbell, Newspaper } from 'lucide-react';
 import { statusBadge, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -31,6 +31,8 @@ export default function LeagueDetail() {
   const [pendingMatch, setPendingMatch] = useState<GroupedFixture | null>(null);
   const [filterTeam, setFilterTeam] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [autoSimming, setAutoSimming] = useState(false);
+  const autoSimRef = useRef(false);
 
   const [joinManager, setJoinManager] = useState('');
   const [joinTeam, setJoinTeam] = useState('');
@@ -72,6 +74,7 @@ export default function LeagueDetail() {
   }, [id, setStoreManagers]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { return () => { autoSimRef.current = false; }; }, []);
 
   const handleStart = async () => {
     if (!id) return;
@@ -163,6 +166,34 @@ export default function LeagueDetail() {
     await handleAdvance(false, true);
   };
 
+  const stopAutoSim = () => {
+    autoSimRef.current = false;
+    setAutoSimming(false);
+  };
+
+  const startAutoSim = async () => {
+    if (!id || autoSimRef.current) return;
+    autoSimRef.current = true;
+    setAutoSimming(true);
+    try {
+      while (autoSimRef.current) {
+        const result = await leaguesApi.advanceDay(id, true);
+        setLastSim(result);
+        await load();
+        if (!result.success) {
+          toast.info(result.message || 'Season may be complete');
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 300));
+      }
+    } catch {
+      toast.error('Auto-sim error');
+    } finally {
+      autoSimRef.current = false;
+      setAutoSimming(false);
+    }
+  };
+
   const filteredWeeks = weeks
     .map((w) => ({
       ...w,
@@ -216,15 +247,21 @@ export default function LeagueDetail() {
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => handleAdvance(false)} disabled={simulating} className="btn-secondary flex items-center gap-1.5 text-xs">
+              <button onClick={() => handleAdvance(false)} disabled={simulating || autoSimming} className="btn-secondary flex items-center gap-1.5 text-xs">
                 <Play className="w-3.5 h-3.5" />{simulating ? 'Simulating...' : 'Next Day'}
               </button>
-              <button onClick={() => handleAdvance(true)} disabled={simulating} className="btn-primary flex items-center gap-1.5 text-xs">
+              <button onClick={() => handleAdvance(true)} disabled={simulating || autoSimming} className="btn-primary flex items-center gap-1.5 text-xs">
                 <FastForward className="w-3.5 h-3.5" />Skip to Match
               </button>
-              <button onClick={() => handleAdvance(true, true)} disabled={simulating} className="btn-ghost flex items-center gap-1.5 text-xs">
-                <Bot className="w-3.5 h-3.5" />Auto-Sim
-              </button>
+              {autoSimming ? (
+                <button onClick={stopAutoSim} className="btn-ghost flex items-center gap-1.5 text-xs border-red-500/30 text-red-400 hover:bg-red-500/10">
+                  <Square className="w-3.5 h-3.5" />Stop
+                </button>
+              ) : (
+                <button onClick={startAutoSim} disabled={simulating} className="btn-ghost flex items-center gap-1.5 text-xs">
+                  <Bot className="w-3.5 h-3.5" />Auto-Sim
+                </button>
+              )}
             </div>
           </div>
           {lastSim && lastSim.simulatedMatches.length > 0 && (

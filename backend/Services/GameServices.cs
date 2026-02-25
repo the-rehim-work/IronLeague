@@ -241,12 +241,11 @@ public class MatchService : IMatchService
         if (match == null)
             return null;
 
-        var matchDto = new MatchDto(match.Id, fixture.Id, match.HomeScore, match.AwayScore, match.CurrentTick, match.TotalTicks, match.Status.ToString(),
+        return new MatchDto(match.Id, fixture.Id, match.HomeScore, match.AwayScore, match.CurrentTick, match.TotalTicks, match.Status.ToString(),
             match.Weather.ToString(), match.Attendance,
             new MatchTeamDto(fixture.HomeTeam.Id, fixture.HomeTeam.BaseTeam.Name, match.HomeFormation ?? "4-4-2", match.HomeTactics ?? "", match.HomeSpeechesUsed, match.HomePausesUsed, new List<MatchPlayerDto>()),
-            new MatchTeamDto(fixture.AwayTeam.Id, fixture.AwayTeam.BaseTeam.Name, match.AwayFormation ?? "4-4-2", match.AwayTactics ?? "", match.AwaySpeechesUsed, match.AwayPausesUsed, new List<MatchPlayerDto>())
-            , [.. (IEnumerable<MatchEventDto>)match.Events]);
-        return matchDto;
+            new MatchTeamDto(fixture.AwayTeam.Id, fixture.AwayTeam.BaseTeam.Name, match.AwayFormation ?? "4-4-2", match.AwayTactics ?? "", match.AwaySpeechesUsed, match.AwayPausesUsed, new List<MatchPlayerDto>()),
+            match.Events.Select(e => new MatchEventDto(e.Id, e.Tick, e.Minute, e.Type.ToString(), e.PrimaryPlayer?.LastName, e.SecondaryPlayer?.LastName, e.IsHomeTeam, e.Description, e.IsKeyEvent, e.IsImportantEvent, e.PositionX, e.PositionY)).ToList());
     }
 
     public async Task<bool> PauseMatchAsync(Guid matchId, Guid managerId)
