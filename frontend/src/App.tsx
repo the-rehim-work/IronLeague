@@ -1,33 +1,22 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { useState, useEffect, createContext, useContext, ReactNode, useMemo } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, useParams } from 'react-router-dom';
-import { HubConnectionBuilder, HubConnection, LogLevel } from '@microsoft/signalr';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useAuthStore } from './stores/authStore';
+import { getStoredUser } from './api/client';
 
-interface User {
-  id: string;
-  userName: string;
-  email: string;
-  displayName: string;
-  isAdmin?: boolean;
-}
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Managers from './pages/Managers';
+import CreateManager from './pages/CreateManager';
+import ManagerDetail from './pages/Managerdetail';
+import Leagues from './pages/Leagues';
+import CreateLeague from './pages/Createleague';
+import LeagueDetail from './pages/LeagueDetail';
+import TeamDetail from './pages/TeamDetail';
+import PlayerDetail from './pages/PlayerDetail';
+import Match from './pages/Match';
 
-interface Manager {
-  id: string;
-  name: string;
-  nationality: string;
-  age: number;
-  physical: number;
-  mental: number;
-  technical: number;
-  reputation: number;
-  personalBalance: number;
-  isRetired: boolean;
-  currentTeamId?: string;
-  currentTeamName?: string;
-  leagueInstanceId?: string
-  languages: { languageCode: string; proficiency: number }[];
-}
+function PrivateRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuthStore();
 
 interface Country {
   code: string;
@@ -709,545 +698,40 @@ function DashboardPage() {
   }, [token, setManagers]);
 
   if (loading) {
+  if (isLoading) {
     return (
-      <Layout>
-        <div className="text-center py-20 text-zinc-400">Loading...</div>
-      </Layout>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+          <p className="text-gray-400">Loading Iron League...</p>
+        </div>
+      </div>
     );
   }
 
-  return (
-    <Layout>
-      <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <div className="flex gap-3">
-            <Button onClick={() => nav('/leagues/create')}>+ Create League</Button>
-            <Button variant="secondary" onClick={() => nav('/leagues')}>Browse Leagues</Button>
-          </div>
-        </div>
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">My Managers</h2>
-              <Button variant="ghost" onClick={() => nav('/manager/create')}>+ New</Button>
-            </div>
-            {managers.length === 0 ? (
-              <div className="text-center py-8 text-zinc-500">
-                <p className="mb-4">No managers yet</p>
-                <Button onClick={() => nav('/manager/create')}>Create Manager</Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {managers.map((m) => (
-                  <div key={m.id} className="p-4 bg-zinc-800/50 rounded-lg flex justify-between items-center hover:bg-zinc-700/50 transition cursor-pointer">
-                    <div>
-                      <p className="font-medium">{m.name}</p>
-                      <p className="text-sm text-zinc-400">{m.currentTeamName || 'Free Agent'}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-emerald-400">Rep: {m.reputation}</p>
-                      <p className="text-sm text-zinc-500">Age: {m.age}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-          <Card>
-            <h2 className="text-xl font-semibold mb-4">My Leagues</h2>
-            {leagues.length === 0 ? (
-              <div className="text-center py-8 text-zinc-500">
-                <p className="mb-4">Not in any leagues yet</p>
-                <Button onClick={() => nav('/leagues')}>Browse Leagues</Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {leagues.map((l) => (
-                  <button
-                    key={l.id}
-                    onClick={() => nav(`/league/${l.id}`)}
-                    className="w-full p-4 bg-zinc-800/50 rounded-lg flex justify-between items-center hover:bg-zinc-700/50 transition text-left cursor-pointer"
-                  >
-                    <div>
-                      <p className="font-medium">{l.name}</p>
-                      <p className="text-sm text-zinc-400">Season {l.currentSeason}</p>
-                    </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs ${l.status === 'Active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
-                        }`}
-                    >
-                      {l.status}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </Card>
-        </div>
-      </div>
-    </Layout>
-  );
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
 }
 
-function ManagerPage() {
-  const { managers } = useApp();
-  const nav = useNavigate();
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuthStore();
 
-  return (
-    <Layout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">My Managers</h1>
-          <Button onClick={() => nav('/manager/create')}>+ Create Manager</Button>
-        </div>
-        {managers.length === 0 ? (
-          <Card>
-            <div className="text-center py-12">
-              <p className="text-zinc-400 mb-4">You haven't created any managers yet.</p>
-              <Button onClick={() => nav('/manager/create')}>Create Your First Manager</Button>
-            </div>
-          </Card>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {managers.map((m) => (
-              <Card key={m.id}>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-16 h-16 bg-zinc-700 rounded-full flex items-center justify-center text-2xl">👔</div>
-                  <div>
-                    <h3 className="font-semibold text-lg">{m.name}</h3>
-                    <p className="text-sm text-zinc-400">
-                      {m.nationality} • Age {m.age}
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center text-sm mb-4">
-                  <div className="bg-zinc-800 rounded p-2">
-                    <p className="text-zinc-400">PHY</p>
-                    <p className="font-medium">{m.physical}</p>
-                  </div>
-                  <div className="bg-zinc-800 rounded p-2">
-                    <p className="text-zinc-400">MEN</p>
-                    <p className="font-medium">{m.mental}</p>
-                  </div>
-                  <div className="bg-zinc-800 rounded p-2">
-                    <p className="text-zinc-400">TEC</p>
-                    <p className="font-medium">{m.technical}</p>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-zinc-400">{m.currentTeamName || 'Free Agent'}</span>
-                  <span className="text-emerald-400">Rep: {m.reputation}</span>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-    </Layout>
-  );
-}
-
-function CreateManagerPage() {
-  const { token, setManagers } = useApp();
-  const [name, setName] = useState('');
-  const [nationality, setNationality] = useState('');
-  const [earlyBonus, setEarlyBonus] = useState(false);
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const nav = useNavigate();
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch(`${API}/data/countries`);
-        if (res.ok) {
-          const data = await res.json();
-          setCountries(data);
-          if (data.length > 0) setNationality(data[0].code);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    load();
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) {
-      setError('Name is required');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch(`${API}/manager`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ name, nationality, earlyBonus }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.message || 'Failed to create manager');
-        return;
-      }
-      const managersRes = await fetch(`${API}/manager/mine`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (managersRes.ok) {
-        const data = await managersRes.json();
-        setManagers(data);
-      }
-      nav('/dashboard');
-    } catch (err) {
-      setError('Network error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Layout>
-      <div className="max-w-xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Create Manager</h1>
-        <Card>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm text-zinc-400 mb-1">Name</label>
-              <Input value={name} onChange={setName} placeholder="Manager name" required />
-            </div>
-            <div>
-              <label className="block text-sm text-zinc-400 mb-1">Nationality</label>
-              <Select
-                value={nationality}
-                onChange={setNationality}
-                options={countries.map((c) => ({ value: c.code, label: c.name }))}
-              />
-            </div>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={earlyBonus}
-                onChange={(e) => setEarlyBonus(e.target.checked)}
-                className="w-5 h-5 rounded accent-emerald-500"
-              />
-              <span className="text-zinc-300">Early grind mode (start weaker, grow faster)</span>
-            </label>
-            <p className="text-sm text-zinc-500">
-              With early bonus: Start at 40 stats but faster growth. Without: Start at 60 but slower.
-            </p>
-            {error && <p className="text-red-400 text-sm">{error}</p>}
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? 'Creating...' : 'Create Manager'}
-            </Button>
-          </form>
-        </Card>
-      </div>
-    </Layout>
-  );
-}
-
-function BrowseLeaguesPage() {
-  const { token } = useApp();
-  const [baseLeagues, setBaseLeagues] = useState<League[]>([]);
-  const [publicLeagues, setPublicLeagues] = useState<LeagueInstance[]>([]);
-  const [loading, setLoading] = useState(true);
-  const nav = useNavigate();
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [baseRes, publicRes] = await Promise.all([
-          fetch(`${API}/data/leagues`),
-          fetch(`${API}/leagueinstance/public`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
-        if (baseRes.ok) {
-          const data = await baseRes.json();
-          setBaseLeagues(data);
-        }
-        if (publicRes.ok) {
-          const data = await publicRes.json();
-          setPublicLeagues(data);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [token]);
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <Layout>
-        <div className="text-center py-20 text-zinc-400">Loading...</div>
-      </Layout>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+          <p className="text-gray-400">Loading Iron League...</p>
+        </div>
+      </div>
     );
   }
 
-  return (
-    <Layout>
-      <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Browse Leagues</h1>
-          <Button onClick={() => nav('/leagues/create')}>+ Create League</Button>
-        </div>
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card>
-            <h2 className="text-xl font-semibold mb-4">Base Leagues</h2>
-            {baseLeagues.length === 0 ? (
-              <p className="text-zinc-500">No leagues available. Admin needs to seed data.</p>
-            ) : (
-              <div className="space-y-3">
-                {baseLeagues.map((l) => (
-                  <div key={l.id} className="p-4 bg-zinc-800/50 rounded-lg">
-                    <p className="font-medium">{l.name}</p>
-                    <p className="text-sm text-zinc-400">
-                      {l.countryName} • {l.maxTeams} teams
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-          <Card>
-            <h2 className="text-xl font-semibold mb-4">Public Lobbies</h2>
-            {publicLeagues.length === 0 ? (
-              <p className="text-zinc-500 py-4">No public lobbies available</p>
-            ) : (
-              <div className="space-y-3">
-                {publicLeagues.map((l) => (
-                  <button
-                    key={l.id}
-                    onClick={() => nav(`/league/${l.id}/join`)}
-                    className="w-full p-4 bg-zinc-800/50 rounded-lg text-left hover:bg-zinc-700/50 transition"
-                  >
-                    <p className="font-medium">{l.name}</p>
-                    <p className="text-sm text-zinc-400">
-                      {l.currentPlayerCount}/{l.maxPlayers} players • {l.ownerName}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            )}
-          </Card>
-        </div>
-      </div>
-    </Layout>
-  );
-}
-
-function CreateLeaguePage() {
-  const { token } = useApp();
-  const [name, setName] = useState('');
-  const [baseLeagueId, setBaseLeagueId] = useState('');
-  const [isPrivate, setIsPrivate] = useState(true);
-  const [password, setPassword] = useState('');
-  const [maxPlayers, setMaxPlayers] = useState('20');
-  const [baseLeagues, setBaseLeagues] = useState<League[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const nav = useNavigate();
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch(`${API}/data/leagues`);
-        if (res.ok) {
-          const data = await res.json();
-          setBaseLeagues(data);
-          if (data.length > 0) setBaseLeagueId(data[0].id);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    load();
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) {
-      setError('League name is required');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch(`${API}/leagueinstance`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name,
-          baseLeagueId: baseLeagueId || undefined,
-          isPrivate,
-          password: isPrivate ? password : undefined,
-          maxPlayers: parseInt(maxPlayers),
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.message || 'Failed to create league');
-        return;
-      }
-      const league = await res.json();
-      nav(`/league/${league.id}`);
-    } catch (err) {
-      setError('Network error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Layout>
-      <div className="max-w-xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Create League</h1>
-        <Card>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm text-zinc-400 mb-1">League Name</label>
-              <Input value={name} onChange={setName} placeholder="My Awesome League" required />
-            </div>
-            <div>
-              <label className="block text-sm text-zinc-400 mb-1">Base League</label>
-              <Select
-                value={baseLeagueId}
-                onChange={setBaseLeagueId}
-                options={[
-                  { value: '', label: 'Custom (no base)' },
-                  ...baseLeagues.map((l) => ({ value: l.id, label: `${l.name} (${l.countryName})` })),
-                ]}
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-zinc-400 mb-1">Max Players</label>
-              <Input type="number" value={maxPlayers} onChange={setMaxPlayers} />
-            </div>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isPrivate}
-                onChange={(e) => setIsPrivate(e.target.checked)}
-                className="w-5 h-5 rounded accent-emerald-500"
-              />
-              <span className="text-zinc-300">Private League</span>
-            </label>
-            {isPrivate && (
-              <div>
-                <label className="block text-sm text-zinc-400 mb-1">Password</label>
-                <Input type="password" value={password} onChange={setPassword} placeholder="League password" />
-              </div>
-            )}
-            {error && <p className="text-red-400 text-sm">{error}</p>}
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? 'Creating...' : 'Create League'}
-            </Button>
-          </form>
-        </Card>
-      </div>
-    </Layout>
-  );
-}
-
-function JoinLeaguePage() {
-  const { id } = useParams();
-  const { token, managers } = useApp();
-  const [league, setLeague] = useState<LeagueInstance | null>(null);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [selectedManager, setSelectedManager] = useState('');
-  const [selectedTeam, setSelectedTeam] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [joining, setJoining] = useState(false);
-  const [error, setError] = useState('');
-  const nav = useNavigate();
-
-  useEffect(() => {
-    if (!id) return;
-    const load = async () => {
-      try {
-        const res = await fetch(`${API}/leagueinstance/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setLeague(data);
-          if (data.baseLeagueName) {
-            const leaguesRes = await fetch(`${API}/data/leagues`);
-            if (leaguesRes.ok) {
-              const leagues = await leaguesRes.json();
-              const base = leagues.find((l: League) => l.name === data.baseLeagueName);
-              if (base) {
-                const teamsRes = await fetch(`${API}/data/teams/${base.id}`);
-                if (teamsRes.ok) {
-                  const teamsData = await teamsRes.json();
-                  setTeams(teamsData.filter((t: Team) => !t.managerId));
-                }
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [id, token]);
-
-  const handleJoin = async () => {
-    if (!selectedManager || !selectedTeam) {
-      setError('Select a manager and team');
-      return;
-    }
-    setJoining(true);
-    setError('');
-    try {
-      const res = await fetch(`${API}/leagueinstance/join`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          leagueInstanceId: id,
-          managerId: selectedManager,
-          teamId: selectedTeam,
-          password: league?.isPrivate ? password : undefined,
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.message || 'Failed to join');
-        return;
-      }
-      nav(`/league/${id}`);
-    } catch (err) {
-      setError('Network error');
-    } finally {
-      setJoining(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <Layout>
-        <div className="text-center py-20 text-zinc-400">Loading...</div>
-      </Layout>
-    );
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   if (!league) {
@@ -2603,38 +2087,42 @@ function AppProvider({ children, token, user, logout }: { children: ReactNode; t
       {children}
     </AppContext.Provider>
   );
+  return <>{children}</>;
 }
 
 export default function App() {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
-  const [user, setUser] = useState<User | null>(() => {
-    const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
-  });
-
-  const handleLogin = (newToken: string, newUser: User) => {
-    setToken(newToken);
-    setUser(newUser);
-    localStorage.setItem('token', newToken);
-    localStorage.setItem('user', JSON.stringify(newUser));
-  };
-
-  const handleLogout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-  };
-
-  if (!token || !user) {
-    return <Auth onLogin={handleLogin} />;
-  }
+  useEffect(() => {
+    const storedUser = getStoredUser();
+    if (storedUser && localStorage.getItem('token')) {
+      useAuthStore.setState({ user: storedUser, isAuthenticated: true, isLoading: false });
+    } else {
+      useAuthStore.setState({ isLoading: false });
+    }
+  }, []);
 
   return (
     <BrowserRouter>
-      <AppProvider token={token} user={user} logout={handleLogout}>
-        <AppRoutes />
-      </AppProvider>
+      <Routes>
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        
+        <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        
+        <Route path="/managers" element={<PrivateRoute><Managers /></PrivateRoute>} />
+        <Route path="/managers/create" element={<PrivateRoute><CreateManager /></PrivateRoute>} />
+        <Route path="/managers/:id" element={<PrivateRoute><ManagerDetail /></PrivateRoute>} />
+        
+        <Route path="/leagues" element={<PrivateRoute><Leagues /></PrivateRoute>} />
+        <Route path="/leagues/create" element={<PrivateRoute><CreateLeague /></PrivateRoute>} />
+        <Route path="/leagues/:id" element={<PrivateRoute><LeagueDetail /></PrivateRoute>} />
+        
+        <Route path="/teams/:id" element={<PrivateRoute><TeamDetail /></PrivateRoute>} />
+        <Route path="/players/:id" element={<PrivateRoute><PlayerDetail /></PrivateRoute>} />
+        
+        <Route path="/match/:matchId" element={<PrivateRoute><Match /></PrivateRoute>} />
+        
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
     </BrowserRouter>
   );
 }

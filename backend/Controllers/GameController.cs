@@ -5,6 +5,7 @@ using System.Security.Claims;
 using IronLeague.Data;
 using IronLeague.DTOs;
 using IronLeague.Services;
+using IronLeague.Entities;
 
 namespace IronLeague.Controllers;
 
@@ -112,7 +113,13 @@ public class FixtureController : ControllerBase
 public class MatchController : ControllerBase
 {
     private readonly IMatchService _matchService;
-    public MatchController(IMatchService matchService) => _matchService = matchService;
+    private readonly AppDbContext _db;
+
+    public MatchController(IMatchService matchService, AppDbContext db)
+    {
+        _matchService = matchService;
+        _db = db;
+    }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<MatchDto>> Get(Guid id)
@@ -126,6 +133,110 @@ public class MatchController : ControllerBase
     {
         var result = await _matchService.StartMatchAsync(dto);
         return result == null ? BadRequest() : Ok(result);
+    }
+
+    [HttpPost("demo")]
+    public async Task<ActionResult<MatchDto>> CreateDemo()
+    {
+        // For a demo match, we need a LeagueInstance with team instances
+        // Let's create a simple demo league instance with two base teams
+        var baseTeams = await _db.Teams
+            .Include(t => t.League)
+            .OrderBy(t => Guid.NewGuid())
+            .Take(2)
+            .ToListAsync();
+
+        if (baseTeams.Count < 2)
+            return BadRequest("Not enough teams in database");
+
+        // Get current user ID
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        // Create default governance settings
+        var governance = new GovernanceSettings
+        {
+            Id = Guid.NewGuid(),
+            PresetName = "Demo Balanced"
+        };
+
+        _db.Set<GovernanceSettings>().Add(governance);
+
+        // Create a demo league instance
+        var demoLeagueInstance = new LeagueInstance
+        {
+            Id = Guid.NewGuid(),
+            BaseLeagueId = baseTeams[0].LeagueId,
+            Name = "Demo Match League",
+            OwnerId = userId,
+            Status = LeagueStatus.Active,
+            CurrentDate = DateTime.UtcNow,
+            IsPrivate = true,
+            MaxPlayers = 2,
+            CurrentSeason = 1,
+            GovernanceId = governance.Id
+        };
+
+        _db.LeagueInstances.Add(demoLeagueInstance);
+
+        // Create team instances for both teams
+        var homeTeamInstance = new LeagueTeamInstance
+        {
+            Id = Guid.NewGuid(),
+            LeagueInstanceId = demoLeagueInstance.Id,
+            BaseTeamId = baseTeams[0].Id,
+            ManagerId = null
+        };
+
+        var awayTeamInstance = new LeagueTeamInstance
+        {
+            Id = Guid.NewGuid(),
+            LeagueInstanceId = demoLeagueInstance.Id,
+            BaseTeamId = baseTeams[1].Id,
+            ManagerId = null
+        };
+
+        _db.Set<LeagueTeamInstance>().AddRange(homeTeamInstance, awayTeamInstance);
+
+        // Create a competition for this demo league
+        var competition = new Competition
+        {
+            Id = Guid.NewGuid(),
+            LeagueInstanceId = demoLeagueInstance.Id,
+            Name = "Demo Competition",
+            Type = CompetitionType.League,
+            Season = 1,
+            Status = CompetitionStatus.InProgress
+        };
+
+        _db.Set<Competition>().Add(competition);
+
+        // Create the fixture
+        var fixture = new Fixture
+        {
+            Id = Guid.NewGuid(),
+            CompetitionId = competition.Id,
+            HomeTeamId = homeTeamInstance.Id,
+            AwayTeamId = awayTeamInstance.Id,
+            ScheduledDate = DateTime.UtcNow,
+            Status = FixtureStatus.Scheduled,
+            MatchDay = 1,
+            Round = "Demo Match"
+        };
+
+        _db.Fixtures.Add(fixture);
+        await _db.SaveChangesAsync();
+
+        // Start the match
+        var startDto = new StartMatchDto(
+            fixture.Id,
+            "4-4-2",
+            "Balanced",
+            "4-3-3",
+            "Attacking"
+        );
+
+        var result = await _matchService.StartMatchAsync(startDto);
+        return result == null ? BadRequest("Failed to start demo match") : Ok(result);
     }
 }
 
@@ -301,21 +412,43 @@ public class GameController : ControllerBase
         return Ok(await _fixtureService.GetFixturesAsync(competitionId));
     }
 
-    [HttpGet("leagueinstance/{instanceId}/fixtures")]
-    public async Task<ActionResult<List<FixtureDto>>> GetLeagueFixtures(Guid instanceId)
+    [HttpGet("leagueinstance/{id}/fixtures")]
+    public async Task<IActionResult> GetLeagueFixtures(Guid id)
     {
         var competitions = await _db.Competitions
-            .Where(c => c.LeagueInstanceId == instanceId)
+            .Where(c => c.LeagueInstanceId == id)
             .Select(c => c.Id)
             .ToListAsync();
 
-        var allFixtures = new List<FixtureDto>();
-        foreach (var compId in competitions)
-        {
-            allFixtures.AddRange(await _fixtureService.GetFixturesAsync(compId));
-        }
+        var fixtures = await _db.Fixtures
+            .Include(f => f.HomeTeam).ThenInclude(t => t.BaseTeam)
+            .Include(f => f.AwayTeam).ThenInclude(t => t.BaseTeam)
+            .Include(f => f.Match)
+            .Where(f => competitions.Contains(f.CompetitionId))
+            .OrderBy(f => f.MatchDay).ThenBy(f => f.ScheduledDate)
+            .Select(f => new
+            {
+                f.Id,
+                f.CompetitionId,
+                HomeTeamId = f.HomeTeamId,
+                HomeTeamName = f.HomeTeam.BaseTeam.Name,
+                HomeTeamColors = f.HomeTeam.BaseTeam.PrimaryColor,
+                AwayTeamId = f.AwayTeamId,
+                AwayTeamName = f.AwayTeam.BaseTeam.Name,
+                AwayTeamColors = f.AwayTeam.BaseTeam.PrimaryColor,
+                f.ScheduledDate,
+                f.MatchDay,
+                Status = f.Status.ToString(),
+                Match = f.Match == null ? null : new
+                {
+                    f.Match.Id,
+                    f.Match.HomeScore,
+                    f.Match.AwayScore
+                }
+            })
+            .ToListAsync();
 
-        return Ok(allFixtures.OrderBy(f => f.ScheduledDate).ToList());
+        return Ok(fixtures);
     }
 
     [HttpGet("leagueinstance/{instanceId}/fixtures/grouped")]

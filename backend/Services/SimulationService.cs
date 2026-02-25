@@ -77,7 +77,6 @@ public class SimulationService : ISimulationService
         }
 
         var currentDate = instance.CurrentDate;
-        var nextDate = currentDate.AddDays(1);
 
         var todaysFixtures = await _db.Fixtures
             .Include(f => f.Competition).ThenInclude(c => c.LeagueInstance).ThenInclude(l => l.Governance)
@@ -91,6 +90,7 @@ public class SimulationService : ISimulationService
 
         var simulatedMatches = new List<MatchSimResult>();
         FixtureDto? playerMatchUpcoming = null;
+        bool hasUnplayedPlayerMatch = false;
 
         foreach (var fixture in todaysFixtures)
         {
@@ -100,6 +100,7 @@ public class SimulationService : ISimulationService
             if (involvesPlayer && !simulatePlayerMatches)
             {
                 playerMatchUpcoming = MapFixture(fixture);
+                hasUnplayedPlayerMatch = true;
                 continue;
             }
 
@@ -119,7 +120,7 @@ public class SimulationService : ISimulationService
 
         if (playerMatchUpcoming == null)
         {
-            instance.CurrentDate = nextDate;
+            instance.CurrentDate = currentDate.AddDays(1);
         }
 
         await _db.SaveChangesAsync();
@@ -368,6 +369,7 @@ public class SimulationService : ISimulationService
     {
         if (players.Count == 0) return 1.0f;
 
+        var top11 = players.OrderByDescending(p =>
         var top11 = players.OrderByDescending(p =>
             (p.Pace + p.Shooting + p.Passing + p.Dribbling + p.Defending + p.Physical) / 6f)
             .Take(11).ToList();

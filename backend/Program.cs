@@ -164,19 +164,32 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        logger.LogInformation("Applying EF Core migrations...");
+        logger.LogInformation("Ensuring database exists and applying migrations...");
+
         await db.Database.MigrateAsync();
-        logger.LogInformation("EF Core migrations applied.");
+
+        logger.LogInformation("Database created and migrations applied successfully.");
     }
     catch (Exception ex)
     {
         logger.LogError(ex, "Database migration failed.");
+        logger.LogError("Connection string: {ConnectionString}",
+            builder.Configuration.GetConnectionString("DefaultConnection")?.Split("Password=")[0] + "Password=***");
         throw;
     }
 
-    var adminService = scope.ServiceProvider.GetRequiredService<IAdminService>();
-    await adminService.SeedInitialDataAsync();
-    logger.LogInformation("Initial data seeded.");
+    try
+    {
+        logger.LogInformation("Seeding initial data...");
+        var adminService = scope.ServiceProvider.GetRequiredService<IAdminService>();
+        await adminService.SeedInitialDataAsync();
+        logger.LogInformation("Initial data seeded successfully.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Data seeding failed.");
+        throw;
+    }
 }
 
 if (app.Environment.IsDevelopment())

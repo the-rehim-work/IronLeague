@@ -1,0 +1,11 @@
+export { default as Login } from './Login';
+export { default as Dashboard } from './Dashboard';
+export { default as Managers } from './Managers';
+export { default as CreateManager } from './CreateManager';
+export { default as ManagerDetail } from './Managerdetail';
+export { default as Leagues } from './Leagues';
+export { default as CreateLeague } from './Createleague';
+export { default as LeagueDetail } from './LeagueDetail';
+export { default as TeamDetail } from './TeamDetail';
+export { default as PlayerDetail } from './PlayerDetail';
+export { default as Match } from './Match';
