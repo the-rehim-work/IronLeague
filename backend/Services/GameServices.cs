@@ -223,8 +223,25 @@ public class MatchService : IMatchService
             Weather = (WeatherType)new Random().Next(0, 8),
             Attendance = (int)(fixture.HomeTeam.BaseTeam.StadiumCapacity * (0.7 + new Random().NextDouble() * 0.3)),
             HomeFormation = dto.HomeFormation ?? "4-4-2",
-            AwayFormation = dto.AwayFormation ?? "4-4-2"
+            AwayFormation = dto.AwayFormation ?? "4-4-2",
+            HomeTactics = dto.HomeTactics,
+            AwayTactics = dto.AwayTactics
         };
+
+        // Seed the kickoff state + event so the live tick loop always has a valid
+        // previous state to advance from (the engine reads the latest state on join).
+        var initialState = _engine.CreateInitialState(match);
+        match.States.Add(initialState);
+        match.Events.Add(new MatchEvent
+        {
+            Id = Guid.NewGuid(),
+            MatchId = match.Id,
+            Tick = 0,
+            Type = MatchEventType.KickOff,
+            IsHomeTeam = initialState.IsHomeTeamPossession,
+            Description = "Kick off!",
+            IsKeyEvent = true
+        });
 
         _db.Matches.Add(match);
         fixture.MatchId = match.Id;

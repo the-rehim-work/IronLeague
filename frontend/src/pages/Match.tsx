@@ -36,17 +36,19 @@ export default function MatchPage() {
 
       hub.on('MatchState', (raw: unknown) => {
         const d = raw as Record<string, unknown>;
+        const status = (norm(d, 'status') as string) || 'InProgress';
         setState({
           tick: (norm(d, 'tick') as number) || 0,
           ballX: (norm(d, 'ballX') as number) || 50,
           ballY: (norm(d, 'ballY') as number) || 50,
           homeScore: (norm(d, 'homeScore') as number) || 0,
           awayScore: (norm(d, 'awayScore') as number) || 0,
-          status: (norm(d, 'status') as string) || 'InProgress',
+          status,
           isHomeTeamPossession: (norm(d, 'isHomeTeamPossession') as boolean) ?? true,
           homeMomentum: (norm(d, 'homeMomentum') as number) || 50,
           awayMomentum: (norm(d, 'awayMomentum') as number) || 50,
         });
+        if (status === 'Finished') setFinished(true);
       });
 
       hub.on('MatchInfo', (raw: unknown) => {
@@ -75,7 +77,7 @@ export default function MatchPage() {
           primaryPlayerName: norm(d, 'primaryPlayerName') as string | undefined,
           secondaryPlayerName: norm(d, 'secondaryPlayerName') as string | undefined,
         };
-        setEvents((prev) => [...prev, evt]);
+        setEvents((prev) => (prev.some((e) => e.id === evt.id) ? prev : [...prev, evt]));
       });
 
       hub.on('MatchPaused', () => setPaused(true));

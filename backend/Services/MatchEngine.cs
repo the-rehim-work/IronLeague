@@ -9,7 +9,8 @@ namespace IronLeague.Services;
 public interface IMatchEngine
 {
     Task<Match> CreateMatchAsync(Guid fixtureId);
-    Task<MatchState> ProcessTickAsync(Match match, GovernanceSettings governance);
+    MatchState CreateInitialState(Match match);
+    MatchState ProcessTick(Match match, MatchState prevState, GovernanceSettings governance);
     Task ApplySpeechAsync(Match match, Speech speech, GovernanceSettings governance);
     float CalculateInfluence(float baseValue, float weight, CurveType curve, CombinationMethod method, float context);
 }
@@ -74,10 +75,31 @@ public class MatchEngine : IMatchEngine
         return match;
     }
 
-    public async Task<MatchState> ProcessTickAsync(Match match, GovernanceSettings gov)
+    // Builds the tick-0 kickoff state without persisting. Used when a match is started
+    // so the live loop always has a valid previous state to advance from.
+    public MatchState CreateInitialState(Match match)
     {
-        var prevState = match.States.OrderByDescending(s => s.Tick).First();
-        var newTick = prevState.Tick + 1;
+        return new MatchState
+        {
+            Id = Guid.NewGuid(),
+            MatchId = match.Id,
+            Tick = 0,
+            BallX = 50f,
+            BallY = 50f,
+            IsHomeTeamPossession = _rng.Next(2) == 0,
+            HomeMomentum = 50f,
+            AwayMomentum = 50f,
+            PlayerPositionsJson = "{}"
+        };
+    }
+
+    // Advances the match by exactly one game-tick. The caller owns state continuity by
+    // passing the previous state and persistence by deciding when to SaveChanges — this
+    // method only mutates the in-memory match graph and returns the new state.
+    public MatchState ProcessTick(Match match, MatchState prevState, GovernanceSettings gov)
+    {
+        gov ??= new GovernanceSettings();
+        var newTick = match.CurrentTick + 1;
         var positions = JsonSerializer.Deserialize<Dictionary<Guid, PlayerPositionDto>>(prevState.PlayerPositionsJson) ?? new();
 
         var ballX = prevState.BallX;
@@ -168,9 +190,6 @@ public class MatchEngine : IMatchEngine
         var hasKeyEvent = match.Events.Any(e => e.Tick == newTick && e.IsKeyEvent);
         if (ShouldSnapshot(newTick, hasKeyEvent))
             match.States.Add(newState);
-
-        if (newTick % 60 == 0 || hasKeyEvent || match.Status == MatchStatus.Finished)
-            await _db.SaveChangesAsync();
 
         return newState;
     }

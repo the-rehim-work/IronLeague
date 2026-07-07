@@ -4,6 +4,8 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
+		<!-- Only the .NET 10 runtime is installed on this machine; allow the net8.0 app to run on it. -->
+		<RollForward>LatestMajor</RollForward>
 	</PropertyGroup>
 
 	<ItemGroup>

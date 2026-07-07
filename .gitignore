@@ -55,7 +55,11 @@ appsettings.*.json
 !appsettings.json
 !appsettings.Development.json
 !appsettings.Production.json
+# EF Core migrations are part of the source — they provision the schema on any machine.
+# (Only ignore a Migrations/ folder that isn't the backend's EF migrations.)
 Migrations/
+!backend/Migrations/
+!backend/Migrations/**
 
 # ============================================
 # Visual Studio / VS Code

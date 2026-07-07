@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.Security.Claims;
 using IronLeague.Data;
 using IronLeague.Services;
@@ -14,16 +15,31 @@ namespace IronLeague.Hubs;
 public class MatchHub : Hub
 {
     private readonly IMatchService _matchService;
-    private readonly IMatchEngine _matchEngine;
     private readonly AppDbContext _db;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IHubContext<MatchHub> _hubContext;
+
+    // How many game-ticks to advance per broadcast step, and the real-time delay between
+    // steps. 30 ticks (0.5 game-min) per ~550ms keeps a full 5400-tick match at ~90s of
+    // wall-clock while still animating the ball smoothly.
+    private const int TicksPerStep = 30;
+    private const int StepDelayMs = 550;
+    private const int HalfTimeBreakMs = 4000;
+
     private static readonly ConcurrentDictionary<Guid, CancellationTokenSource> _runningMatches = new();
+    private static readonly ConcurrentDictionary<Guid, bool> _pausedMatches = new();
     private static readonly ConcurrentDictionary<Guid, ConcurrentDictionary<string, byte>> _matchConnections = new();
 
-    public MatchHub(IMatchService matchService, IMatchEngine matchEngine, AppDbContext db)
+    public MatchHub(
+        IMatchService matchService,
+        AppDbContext db,
+        IServiceScopeFactory scopeFactory,
+        IHubContext<MatchHub> hubContext)
     {
         _matchService = matchService;
-        _matchEngine = matchEngine;
         _db = db;
+        _scopeFactory = scopeFactory;
+        _hubContext = hubContext;
     }
 
     public async Task JoinMatch(Guid matchId)
@@ -36,7 +52,19 @@ public class MatchHub : Hub
         var match = await _matchService.GetMatchAsync(matchId);
         if (match != null)
         {
-            await Clients.Caller.SendAsync("MatchState", match);
+            await Clients.Caller.SendAsync("MatchState", new
+            {
+                Tick = match.CurrentTick,
+                Minute = match.CurrentTick / 60,
+                BallX = 50f,
+                BallY = 50f,
+                IsHomeTeamPossession = true,
+                HomeMomentum = 50f,
+                AwayMomentum = 50f,
+                match.HomeScore,
+                match.AwayScore,
+                match.Status
+            });
             await Clients.Caller.SendAsync("MatchInfo", new
             {
                 HomeTeamName = match.HomeTeam.TeamName,
@@ -46,6 +74,15 @@ public class MatchHub : Hub
                 Weather = match.Weather,
                 Attendance = match.Attendance
             });
+
+            // Auto-resume the live simulation for any match that isn't finished. This is
+            // what makes the REST-created match actually tick — the first viewer to join
+            // starts the loop, subsequent joiners are guarded out by TryAdd.
+            if (match.Status != MatchStatus.Finished.ToString() &&
+                match.Status != MatchStatus.Abandoned.ToString())
+            {
+                EnsureSimulationRunning(matchId);
+            }
         }
     }
 
@@ -73,6 +110,10 @@ public class MatchHub : Hub
             }
 
             await Groups.AddToGroupAsync(Context.ConnectionId, $"match_{match.Id}");
+            _matchConnections.GetOrAdd(match.Id, _ => new ConcurrentDictionary<string, byte>())
+                .TryAdd(Context.ConnectionId, 0);
+
+            await Clients.Group($"match_{match.Id}").SendAsync("MatchStarted", new { MatchId = match.Id });
             await Clients.Group($"match_{match.Id}").SendAsync("MatchInfo", new
             {
                 HomeTeamName = match.HomeTeam.TeamName,
@@ -83,9 +124,7 @@ public class MatchHub : Hub
                 Attendance = match.Attendance
             });
 
-            var cts = new CancellationTokenSource();
-            _runningMatches.TryAdd(match.Id, cts);
-            _ = RunMatchSimulation(match.Id, cts.Token);
+            EnsureSimulationRunning(match.Id);
         }
         catch (Exception ex)
         {
@@ -106,6 +145,7 @@ public class MatchHub : Hub
         var success = await _matchService.PauseMatchAsync(matchId, manager.Id);
         if (success)
         {
+            _pausedMatches[matchId] = true;
             await Clients.Group($"match_{matchId}").SendAsync("MatchPaused", new
             {
                 ManagerId = manager.Id,
@@ -128,6 +168,7 @@ public class MatchHub : Hub
         var success = await _matchService.ResumeMatchAsync(matchId, manager.Id);
         if (success)
         {
+            _pausedMatches[matchId] = false;
             await Clients.Group($"match_{matchId}").SendAsync("MatchResumed", new
             {
                 ManagerId = manager.Id,
@@ -168,101 +209,133 @@ public class MatchHub : Hub
         }
     }
 
-    // TODO: Implement ChangeTactics when ITacticService is integrated
-    // public async Task ChangeTactics(TacticalChangeDto dto) { }
+    private void EnsureSimulationRunning(Guid matchId)
+    {
+        var cts = new CancellationTokenSource();
+        if (_runningMatches.TryAdd(matchId, cts))
+        {
+            _ = RunMatchSimulation(matchId, cts.Token);
+        }
+        else
+        {
+            cts.Dispose();
+        }
+    }
 
+    // Runs on a background task that outlives the hub invocation, so it must not touch the
+    // hub's scoped services (_db, Clients). It creates its own DI scope and broadcasts via
+    // the singleton IHubContext.
     private async Task RunMatchSimulation(Guid matchId, CancellationToken ct)
     {
+        var group = _hubContext.Clients.Group($"match_{matchId}");
         try
         {
-            while (!ct.IsCancellationRequested)
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var engine = scope.ServiceProvider.GetRequiredService<IMatchEngine>();
+
+            var match = await db.Matches
+                .Include(m => m.Events)
+                .Include(m => m.States)
+                .Include(m => m.Fixture)
+                    .ThenInclude(f => f.Competition)
+                    .ThenInclude(c => c.LeagueInstance)
+                    .ThenInclude(l => l.Governance)
+                .FirstOrDefaultAsync(m => m.Id == matchId, ct);
+
+            if (match == null || match.Status == MatchStatus.Finished || match.Status == MatchStatus.Abandoned)
+                return;
+
+            var governance = match.Fixture.Competition.LeagueInstance.Governance ?? new GovernanceSettings();
+
+            var current = match.States.OrderByDescending(s => s.Tick).FirstOrDefault();
+            if (current == null)
             {
-                var match = await _db.Matches
-                    .Include(m => m.Fixture)
-                        .ThenInclude(f => f.Competition)
-                        .ThenInclude(c => c.LeagueInstance)
-                        .ThenInclude(l => l.Governance)
-                    .FirstOrDefaultAsync(m => m.Id == matchId, ct);
+                current = engine.CreateInitialState(match);
+                match.States.Add(current);
+                await db.SaveChangesAsync(ct);
+            }
 
-                if (match == null || match.Status == MatchStatus.Finished)
-                    break;
+            var sentEventIds = new HashSet<Guid>();
 
-                if (match.IsPaused)
+            while (!ct.IsCancellationRequested && match.Status != MatchStatus.Finished)
+            {
+                if (_pausedMatches.TryGetValue(matchId, out var paused) && paused)
                 {
                     await Task.Delay(1000, ct);
                     continue;
                 }
 
-                if (match.Status == MatchStatus.HalfTime)
+                for (int i = 0; i < TicksPerStep; i++)
                 {
-                    await Task.Delay(5000, ct);
-                    match.Status = MatchStatus.SecondHalf;
-                    await _db.SaveChangesAsync(ct);
-                    await Clients.Group($"match_{matchId}").SendAsync("SecondHalfStarted");
-                    continue;
+                    if (match.Status == MatchStatus.Finished) break;
+                    current = engine.ProcessTick(match, current, governance);
+                    if (match.Status == MatchStatus.HalfTime) break;
                 }
 
-                var governance = match.Fixture.Competition.LeagueInstance.Governance;
-                var state = await _matchEngine.ProcessTickAsync(match, governance);
+                await db.SaveChangesAsync(ct);
 
-                await Clients.Group($"match_{matchId}").SendAsync("MatchState", new
+                await group.SendAsync("MatchState", new
                 {
-                    Tick = state.Tick,
-                    Minute = state.Tick / 60,
-                    BallX = state.BallX,
-                    BallY = state.BallY,
-                    IsHomeTeamPossession = state.IsHomeTeamPossession,
-                    HomeMomentum = state.HomeMomentum,
-                    AwayMomentum = state.AwayMomentum,
-                    HomeScore = match.HomeScore,
-                    AwayScore = match.AwayScore,
+                    Tick = current.Tick,
+                    Minute = current.Tick / 60,
+                    current.BallX,
+                    current.BallY,
+                    current.IsHomeTeamPossession,
+                    current.HomeMomentum,
+                    current.AwayMomentum,
+                    match.HomeScore,
+                    match.AwayScore,
                     Status = match.Status.ToString()
-                });
+                }, ct);
 
-                var recentEvents = match.Events
-                    .Where(e => e.Tick == state.Tick)
-                    .OrderBy(e => e.Id)
-                    .ToList();
-
-                foreach (var evt in recentEvents)
+                foreach (var evt in match.Events.Where(e => !sentEventIds.Contains(e.Id)).OrderBy(e => e.Tick).ThenBy(e => e.Id).ToList())
                 {
-                    await Clients.Group($"match_{matchId}").SendAsync("MatchEvent", new
+                    sentEventIds.Add(evt.Id);
+                    await group.SendAsync("MatchEvent", new
                     {
-                        Id = evt.Id,
-                        Tick = evt.Tick,
-                        Minute = evt.Minute,
+                        evt.Id,
+                        evt.Tick,
+                        evt.Minute,
                         Type = evt.Type.ToString(),
-                        IsHomeTeam = evt.IsHomeTeam,
-                        Description = evt.Description,
-                        IsKeyEvent = evt.IsKeyEvent,
-                        IsImportantEvent = evt.IsImportantEvent
-                    });
+                        evt.IsHomeTeam,
+                        evt.Description,
+                        evt.IsKeyEvent,
+                        evt.IsImportantEvent
+                    }, ct);
                 }
-
-                await Task.Delay(1000, ct);
 
                 if (match.Status == MatchStatus.Finished)
                 {
-                    await Clients.Group($"match_{matchId}").SendAsync("MatchEnded", new
+                    await group.SendAsync("MatchEnded", new
                     {
-                        HomeScore = match.HomeScore,
-                        AwayScore = match.AwayScore,
+                        match.HomeScore,
+                        match.AwayScore,
                         Winner = match.HomeScore > match.AwayScore ? "Home" :
                                  match.AwayScore > match.HomeScore ? "Away" : "Draw"
-                    });
+                    }, ct);
                     break;
                 }
+
+                if (match.Status == MatchStatus.HalfTime)
+                {
+                    await Task.Delay(HalfTimeBreakMs, ct);
+                    await group.SendAsync("SecondHalfStarted", ct);
+                    continue;
+                }
+
+                await Task.Delay(StepDelayMs, ct);
             }
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            await Clients.Group($"match_{matchId}").SendAsync("Error", $"Match simulation error: {ex.Message}");
+            await group.SendAsync("Error", $"Match simulation error: {ex.Message}");
         }
         finally
         {
-            _runningMatches.TryRemove(matchId, out _);
-            _matchConnections.TryRemove(matchId, out _);
+            if (_runningMatches.TryRemove(matchId, out var cts))
+                cts.Dispose();
         }
     }
 
@@ -303,7 +376,11 @@ public class MatchHub : Hub
             if (kvp.Value.IsEmpty && _matchConnections.TryRemove(kvp.Key, out _))
             {
                 if (_runningMatches.TryRemove(kvp.Key, out var cts))
+                {
                     cts.Cancel();
+                    cts.Dispose();
+                }
+                _pausedMatches.TryRemove(kvp.Key, out _);
             }
         }
 
